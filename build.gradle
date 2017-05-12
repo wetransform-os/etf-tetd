@@ -1,0 +1,128 @@
+///////////////////////////////////////////////////////////////////////////////////////
+//
+// ETF-TETD
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+buildscript {
+	repositories {
+		maven {
+			url "http://services.interactive-instruments.de/etfdev-af/plugins-releases-local"
+			credentials {
+				username 'ii-bda'
+				password '6ozhS683'
+			}}
+	}
+	dependencies {
+		classpath group: 'de.interactive_instruments.bda', name: 'etf-bda', version:'1.0.24'
+	}
+	dependencies {
+		ant.unjar src: configurations.classpath.files.find {it.path.contains('etf')}, dest: 'build/gradle'
+	}
+}
+apply from: 'build/gradle/ii-bda.gradle'
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+group = 'de.interactive_instruments.etf.testdriver'
+description = "ETF Team Engine test driver"
+
+
+ext.testDataDir = project.hasProperty('etf.td.deployment.dir') ?
+		project.getProperty('etf.td.deployment.dir') :
+		project.file('./build/tmp/td')
+
+ext.testDataStorageDir = project.hasProperty('etf.ds.dir') ?
+		project.getProperty('etf.ds.dir') :
+		project.file('./build/tmp/etf-ds').absolutePath
+
+
+repositories {
+	mavenLocal()
+}
+
+configurations {
+	api
+	integrationTest
+}
+
+dependencies {
+	api group: 'de.interactive_instruments', name: 'ii-commons-util', version:'2.0.0'+project.snapshotSuffix
+	api group: 'de.interactive_instruments.etf', name: 'etf-core', version: '1.0.0' + project.snapshotSuffix
+	api group: 'de.interactive_instruments.etf', name: 'etf-spi', version: '1.0.0' + project.snapshotSuffix
+	api group: 'org.slf4j', name: 'slf4j-api', version: etf_slf4jApiVersion
+
+	// https://mvnrepository.com/artifact/org.jsoup/jsoup
+	compile group: 'org.jsoup', name: 'jsoup', version: '1.10.2'
+
+	integrationTest group: 'ch.qos.logback', name: 'logback-classic', version: etf_logbackVersion
+	integrationTest group: 'junit', name: 'junit', version: etf_junitTestVersion
+	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-stdtot', version: '1.0.0' + project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-bsxds', version: '2.0.0' + project.snapshotSuffix
+}
+
+configurations {
+	compile.extendsFrom api
+	testCompile.extendsFrom integrationTest
+}
+
+def allLibs = configurations.runtime + configurations.compile -
+		configurations.compile.filter { it.name.startsWith('etf-core') } -
+		configurations.compile.filter { it.name.startsWith('etf-spi') } -
+		configurations.compile.filter { it.name.startsWith('ii-commons-util') } -
+		configurations.compile.filter { it.name.startsWith('slf4j-api') } -
+		configurations.compile.filter { it.name.startsWith('log4j') && !it.name.startsWith('log4j-over-slf4j') } -
+		configurations.compile.filter { it.name.startsWith('jetty') } -
+		configurations.compile.filter { it.name.startsWith('xml-apis') } -
+		configurations.compile.filter { it.name.startsWith('commons-lang3') } -
+		configurations.compile.filter { it.name.startsWith('xercesImpl') }
+
+jar.doFirst {
+	manifest {
+		attributes(
+				'Test-Engine-Title': 'TEAM Engine',
+				'Implementation-Vendor-Id': 'org.opengis.cite',
+				'Test-Engine-Vendor': 'Open Geospatial Consortium',
+				'Test-Engine-Version': '4.10'
+		)
+	}
+}
+
+jar {
+	into('lib') {
+		from allLibs
+	}
+}
+
+task copyTdToTdDir(dependsOn: jar) << {
+	copy {
+		from jar
+		into "$testDataDir"
+	}
+	println "Copied test driver to $testDataDir"
+}
+
+install {
+	dependsOn = ["copyTdToTdDir"]
+}
+
+// INTEGRATION TESTS
+///////////////////////////////////////////////////////////////////////////////////////
+
+// Drop classloader for integration tests
+sourceSets {
+	test {
+		java {
+			compileClasspath += main.output
+			runtimeClasspath = configurations.api + test.output + configurations.integrationTest
+		}
+	}
+}
+
+test {
+	environment "ETF_DS_DIR", testDataStorageDir
+	environment "ETF_TD_DEPLOYMENT_DIR", testDataDir
+	dependsOn = ["compileTestJava", "copyTdToTdDir"]
+}
+
+///////////////////////////////////////////////////////////////////////////////////////

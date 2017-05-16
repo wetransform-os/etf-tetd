@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import de.interactive_instruments.CLUtils;
 import de.interactive_instruments.Credentials;
@@ -45,6 +46,7 @@ import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.*;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
+import de.interactive_instruments.exceptions.config.InvalidPropertyException;
 import de.interactive_instruments.properties.ConfigProperties;
 import de.interactive_instruments.properties.ConfigPropertyHolder;
 
@@ -60,6 +62,8 @@ public class TeTestDriver implements TestDriver {
 	public static final String TE_REMOTE_URL = "etf.testdrivers.teamengine.url";
 	public static final String TE_REMOTE_USERNAME = "etf.testdrivers.teamengine.username";
 	public static final String TE_REMOTE_PASSWORD = "etf.testdrivers.teamengine.password";
+	// timeout in seconds
+	public static final String TE_TIMEOUT_SEC = "etf.testdrivers.teamengine.timeout";
 	final private ConfigProperties configProperties = new ConfigProperties();
 	private TeTypeLoader typeLoader;
 	private DataStorage dataStorageCallback;
@@ -71,7 +75,7 @@ public class TeTestDriver implements TestDriver {
 	final static ComponentInfo COMPONENT_INFO = new ComponentInfo() {
 		@Override
 		public String getName() {
-			return "SoapUI test driver";
+			return "TEAM Engine test driver";
 		}
 
 		@Override
@@ -134,8 +138,12 @@ public class TeTestDriver implements TestDriver {
 			final TestTaskResultDto testTaskResult = new TestTaskResultDto();
 			testTaskResult.setId(EidFactory.getDefault().createRandomId());
 			testTaskDto.setTestTaskResult(testTaskResult);
-			return new TeTestTask(apiUri, credentials, typeLoader, testTaskDto, dataStorageCallback);
+			return new TeTestTask(
+					(int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 600)),
+					credentials, typeLoader, testTaskDto, dataStorageCallback);
 		} catch (IncompleteDtoException e) {
+			throw new TestTaskInitializationException(e);
+		} catch (InvalidPropertyException e) {
 			throw new TestTaskInitializationException(e);
 		}
 
@@ -157,22 +165,23 @@ public class TeTestDriver implements TestDriver {
 
 		final String teUrl = configProperties.getPropertyOrDefault(TE_REMOTE_URL,
 				"http://cite.opengeospatial.org/teamengine");
-		if(SUtils.isNullOrEmpty(teUrl)) {
-			throw new ConfigurationException("Property "+TE_REMOTE_URL+" not set");
+		if (SUtils.isNullOrEmpty(teUrl)) {
+			throw new ConfigurationException("Property " + TE_REMOTE_URL + " not set");
 		}
 		try {
-			if(teUrl.charAt(teUrl.length()-1)=='/') {
-				apiUri =new URI(teUrl);
-			}else{
-				apiUri =new URI(teUrl+"/");
+			if (teUrl.charAt(teUrl.length() - 1) == '/') {
+				apiUri = new URI(teUrl);
+			} else {
+				apiUri = new URI(teUrl + "/");
 			}
 		} catch (URISyntaxException e) {
-			throw new ConfigurationException("Property "+TE_REMOTE_URL+" must be an URL");
+			throw new ConfigurationException("Property " + TE_REMOTE_URL + " must be an URL");
 		}
 
-		if(configProperties.hasProperty(TE_REMOTE_USERNAME) && configProperties.hasProperty(TE_REMOTE_PASSWORD)) {
-			credentials = new Credentials(configProperties.getProperty(TE_REMOTE_USERNAME), configProperties.getProperty(TE_REMOTE_PASSWORD));
-		}else{
+		if (configProperties.hasProperty(TE_REMOTE_USERNAME) && configProperties.hasProperty(TE_REMOTE_PASSWORD)) {
+			credentials = new Credentials(configProperties.getProperty(TE_REMOTE_USERNAME),
+					configProperties.getProperty(TE_REMOTE_PASSWORD));
+		} else {
 			credentials = null;
 		}
 

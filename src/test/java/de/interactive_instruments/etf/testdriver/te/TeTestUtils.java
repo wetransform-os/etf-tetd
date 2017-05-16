@@ -15,6 +15,10 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
+import static junit.framework.TestCase.assertTrue;
+
+import java.io.IOException;
+
 import de.interactive_instruments.IFile;
 import de.interactive_instruments.etf.EtfConstants;
 import de.interactive_instruments.etf.dal.dao.DataStorageRegistry;
@@ -23,10 +27,6 @@ import de.interactive_instruments.exceptions.InitializationException;
 import de.interactive_instruments.exceptions.InvalidStateTransitionException;
 import de.interactive_instruments.exceptions.StorageException;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
-
-import java.io.IOException;
-
-import static junit.framework.TestCase.assertTrue;
 
 /**
  * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )

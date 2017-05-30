@@ -24,7 +24,7 @@ import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.model.EidMap;
 
 /**
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
 class Types {
 

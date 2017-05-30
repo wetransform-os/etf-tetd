@@ -18,7 +18,7 @@ package de.interactive_instruments.etf.testdriver.te;
 import de.interactive_instruments.etf.testdriver.AbstractTestTaskProgress;
 
 /**
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
 class TeTestTaskProgress extends AbstractTestTaskProgress {
 

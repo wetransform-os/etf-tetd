@@ -25,8 +25,6 @@ import java.util.Collections;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
-import de.interactive_instruments.exceptions.ExcUtils;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -38,11 +36,13 @@ import org.w3c.dom.Node;
 import de.interactive_instruments.*;
 import de.interactive_instruments.etf.dal.dao.DataStorage;
 import de.interactive_instruments.etf.dal.dto.Dto;
+import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
 import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;
 import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
+import de.interactive_instruments.exceptions.ExcUtils;
 import de.interactive_instruments.exceptions.InitializationException;
 import de.interactive_instruments.exceptions.InvalidStateTransitionException;
 import de.interactive_instruments.exceptions.ParseException;
@@ -106,44 +106,44 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 					htmlErrorMessage, "UTF-8"), "ErrorMessage", null,
 					"ErrorMessage");
 			String errorMessage = null;
-			if(htmlErrorMessage!=null) {
+			if (htmlErrorMessage != null) {
 				try {
 					final org.jsoup.nodes.Document doc = Jsoup.parse(htmlErrorMessage);
-					if(doc!=null) {
+					if (doc != null) {
 						final Elements errors = doc.select("body p");
-						if(errors!=null) {
+						if (errors != null) {
 							final StringBuilder errorMessageBuilder = new StringBuilder();
 							for (final org.jsoup.nodes.Element error : errors) {
 								errorMessageBuilder.append(error.text()).append(SUtils.ENDL);
 							}
 							errorMessage = errorMessageBuilder.toString();
 							resultCollector.internalError(
-									("OGC TEAM Engine returned "+String.valueOf(e.getResponseCode())),
+									("OGC TEAM Engine returned " + String.valueOf(e.getResponseCode())),
 									errorMessage.getBytes(),
 									"text/html");
 						}
 					}
-				}catch (Exception ign) {
+				} catch (Exception ign) {
 					ExcUtils.suppress(ign);
 				}
 			}
-			if(errorMessage!=null) {
+			if (errorMessage != null) {
 				getLogger().error(errorMessage);
-			}else{
-				getLogger().error("Response message: "+e.getResponseMessage());
-				getLogger().error("Response code: "+e.getResponseCode());
-				getLogger().error("Invoked endpoint: "+apiUri);
+			} else {
+				getLogger().error("Response message: " + e.getResponseMessage());
+				getLogger().error("Response code: " + e.getResponseCode());
+				getLogger().error("Invoked endpoint: " + apiUri);
 			}
 			throw e;
 		} catch (final SocketTimeoutException e) {
 			getLogger().info("The OGC TEAM Engine is taking too long to respond.");
 			getLogger().info("Checking availability...");
-			if(UriUtils.exists(new URI(
+			if (UriUtils.exists(new URI(
 					testTaskDto.getExecutableTestSuite().getRemoteResource().toString()), credentials)) {
 				getLogger().info("...[OK]. The OGC TEAM Engine is available. "
 						+ "You may need to ask the system administrator to "
 						+ "increase the OGC TEAM Engine test driver timeout.");
-			}else{
+			} else {
 				getLogger().info("...[FAILED]. The OGC TEAM Engine is not available. "
 						+ "Try re-running the test after a few minutes.");
 			}
@@ -207,7 +207,7 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 
 					final int status = mapStatus(testStep);
 					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "started-at", "false"));
-					if(!configStep || status!=0) {
+					if (!configStep || status != 0) {
 
 						final long testStepStartTimestamp = getStartTimestamp(testStep);
 						final String testStepId = getItemID(testStep);
@@ -215,27 +215,27 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 						final long testStepEndTimestamp = getEndTimestamp(testStep);
 
 						// Pseudo Assertion
-					/*
-					final String assertionId = getAssertionID(testStep);
-					resultCollector.startTestAssertion(assertionId, testStepStartTimestamp);
-					*/
+						/*
+						final String assertionId = getAssertionID(testStep);
+						resultCollector.startTestAssertion(assertionId, testStepStartTimestamp);
+						*/
 
 						final String message = getMessage(testStep);
 						if (!SUtils.isNullOrEmpty(message)) {
 							resultCollector.addMessage("TR.teamEngineError", "error", message);
 						}
 						// Pseudo Assertion end
-					/*
-					resultCollector.end(assertionId, mapStatus(testStep), testStepEndTimestamp);
-					*/
+						/*
+						resultCollector.end(assertionId, mapStatus(testStep), testStepEndTimestamp);
+						*/
 
 						// Attachments
 						for (Node attachments = XmlUtils.getFirstChildNodeOfType(testStep, ELEMENT_NODE,
 								"attributes"); attachments != null; attachments = XmlUtils.getNextSiblingOfType(attachments,
-								ELEMENT_NODE, "attributes")) {
+										ELEMENT_NODE, "attributes")) {
 							for (Node attachment = XmlUtils.getFirstChildNodeOfType(attachments, ELEMENT_NODE,
 									"attribute"); attachment != null; attachment = XmlUtils.getNextSiblingOfType(attachment,
-									ELEMENT_NODE, "attribute")) {
+											ELEMENT_NODE, "attribute")) {
 								final String type = XmlUtils.getAttribute(attachment, "name");
 								switch (type) {
 								case "response":
@@ -250,7 +250,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", null,
 												"PostParameter");
 									} else {
-										resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter", null,
+										resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter",
+												null,
 												"GetParameter");
 									}
 									break;

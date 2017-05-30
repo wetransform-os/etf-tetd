@@ -53,10 +53,10 @@ import de.interactive_instruments.properties.ConfigPropertyHolder;
 /**
  * TEAM-Engine test driver component
  *
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
 @ComponentInitializer(id = TE_TEST_DRIVER_EID)
-public class TeTestDriver implements TestDriver {
+public class TeTestDriver extends AbstractTestDriver {
 
 	public static final String TE_TEST_DRIVER_EID = "07f42606-41b1-4871-a83b-64c20012f03b";
 	public static final String TE_REMOTE_URL = "etf.testdrivers.teamengine.url";
@@ -64,8 +64,6 @@ public class TeTestDriver implements TestDriver {
 	public static final String TE_REMOTE_PASSWORD = "etf.testdrivers.teamengine.password";
 	// timeout in seconds
 	public static final String TE_TIMEOUT_SEC = "etf.testdrivers.teamengine.timeout";
-	final private ConfigProperties configProperties = new ConfigProperties();
-	private TeTypeLoader typeLoader;
 	private DataStorage dataStorageCallback;
 	private URI apiUri;
 	private Credentials credentials;
@@ -99,9 +97,8 @@ public class TeTestDriver implements TestDriver {
 		}
 	};
 
-	@Override
-	public Collection<ExecutableTestSuiteDto> getExecutableTestSuites() {
-		return typeLoader.getExecutableTestSuites();
+	public TeTestDriver() {
+		super(new ConfigProperties());
 	}
 
 	@Override
@@ -112,19 +109,6 @@ public class TeTestDriver implements TestDriver {
 	@Override
 	final public ComponentInfo getInfo() {
 		return COMPONENT_INFO;
-	}
-
-	@Override
-	public void lookupExecutableTestSuites(final EtsLookupRequest etsLookupRequest) {
-		final Set<EID> etsIds = etsLookupRequest.getUnknownEts();
-		final Set<ExecutableTestSuiteDto> knownEts = new HashSet<>();
-		for (final EID etsId : etsIds) {
-			final ExecutableTestSuiteDto ets = typeLoader.getExecutableTestSuiteById(etsId);
-			if (ets != null) {
-				knownEts.add(ets);
-			}
-		}
-		etsLookupRequest.addKnownEts(knownEts);
 	}
 
 	@Override
@@ -139,8 +123,8 @@ public class TeTestDriver implements TestDriver {
 			testTaskResult.setId(EidFactory.getDefault().createRandomId());
 			testTaskDto.setTestTaskResult(testTaskResult);
 			return new TeTestTask(
-					(int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 600)),
-					credentials, typeLoader, testTaskDto, dataStorageCallback);
+					(int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 1200)),
+					credentials, (TeTypeLoader) typeLoader, testTaskDto, dataStorageCallback);
 		} catch (IncompleteDtoException e) {
 			throw new TestTaskInitializationException(e);
 		} catch (InvalidPropertyException e) {
@@ -150,14 +134,8 @@ public class TeTestDriver implements TestDriver {
 	}
 
 	@Override
-	public ConfigPropertyHolder getConfigurationProperties() {
-		return this.configProperties;
-	}
-
-	@Override
-	final public void init()
+	final public void doInit()
 			throws ConfigurationException, IllegalStateException, InitializationException, InvalidStateTransitionException {
-		configProperties.expectAllRequiredPropertiesSet();
 		dataStorageCallback = DataStorageRegistry.instance().get(configProperties.getProperty(ETF_DATA_STORAGE_NAME));
 		if (dataStorageCallback == null) {
 			throw new InvalidStateTransitionException("Data Storage not set");
@@ -189,7 +167,11 @@ public class TeTestDriver implements TestDriver {
 
 		typeLoader = new TeTypeLoader(dataStorageCallback, apiUri, credentials, this.getInfo());
 		typeLoader.getConfigurationProperties().setPropertiesFrom(configProperties, true);
-		typeLoader.init();
+	}
+
+	@Override
+	protected void doRelease() {
+
 	}
 
 	private void propagateComponents() throws InitializationException {
@@ -205,15 +187,5 @@ public class TeTestDriver implements TestDriver {
 		} catch (StorageException e) {
 			throw new InitializationException(e);
 		}
-	}
-
-	@Override
-	public boolean isInitialized() {
-		return dataStorageCallback != null && typeLoader != null && typeLoader.isInitialized();
-	}
-
-	@Override
-	public void release() {
-		typeLoader.release();
 	}
 }

@@ -23,6 +23,7 @@ import static org.w3c.dom.Node.ELEMENT_NODE;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.*;
 
 import org.apache.commons.io.IOUtils;
@@ -42,24 +43,26 @@ import de.interactive_instruments.etf.component.ComponentInfo;
 import de.interactive_instruments.etf.dal.dao.Dao;
 import de.interactive_instruments.etf.dal.dao.DataStorage;
 import de.interactive_instruments.etf.dal.dao.WriteDao;
+import de.interactive_instruments.etf.dal.dto.Dto;
 import de.interactive_instruments.etf.dal.dto.capabilities.ComponentDto;
 import de.interactive_instruments.etf.dal.dto.capabilities.TagDto;
 import de.interactive_instruments.etf.dal.dto.test.*;
 import de.interactive_instruments.etf.dal.dto.translation.LangTranslationTemplateCollectionDto;
 import de.interactive_instruments.etf.dal.dto.translation.TranslationTemplateBundleDto;
 import de.interactive_instruments.etf.dal.dto.translation.TranslationTemplateDto;
-import de.interactive_instruments.etf.model.EID;
-import de.interactive_instruments.etf.model.EidFactory;
+import de.interactive_instruments.etf.model.*;
 import de.interactive_instruments.etf.testdriver.EtsTypeLoader;
+import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteLifeCycleListener;
+import de.interactive_instruments.etf.testdriver.TypeBuildingFileVisitor;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
 import de.interactive_instruments.properties.ConfigProperties;
 import de.interactive_instruments.properties.ConfigPropertyHolder;
 
 /**
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
-class TeTypeLoader extends EtsTypeLoader {
+class TeTypeLoader implements EtsTypeLoader {
 
 	// Supported Test Object Types
 
@@ -76,12 +79,16 @@ class TeTypeLoader extends EtsTypeLoader {
 	private final ComponentInfo driverInfo;
 	private final Logger logger = LoggerFactory.getLogger(TeTypeLoader.class);
 	private final Dao<ExecutableTestSuiteDto> etsDao;
+	private final DataStorage dataStorageCallback;
 	private final static String NOTE = "<br/><br/> This Executable Test Suite is executed by ETF on a remote OGC TEAM Engine instance. "
 			+ "The results are transformed into the ETF internal report format. "
 			+ " Some additional information may not exist in the TEAM Engine report "
 			+ "format and can not be mapped to the ETF report format.";
 
 	public static final TranslationTemplateBundleDto TE_TRANSLATION_TEMPLATE_BUNDLE = createTranslationTemplateBundle();
+	private boolean initialized = false;
+	private final EidHolderMap<ExecutableTestSuiteDto> propagatedDtos = new DefaultEidHolderMap<>();
+	private ExecutableTestSuiteLifeCycleListener mediator;
 
 	private static TranslationTemplateBundleDto createTranslationTemplateBundle() {
 		final TranslationTemplateBundleDto translationTemplateBundle = new TranslationTemplateBundleDto();
@@ -103,21 +110,59 @@ class TeTypeLoader extends EtsTypeLoader {
 		return translationTemplateBundle;
 	}
 
-	/**
-	 * Default constructor.
-	 */
-	public TeTypeLoader(final DataStorage dataStorage, final URI apiUri,
-			final Credentials credentials, final ComponentInfo driverInfo) {
-		super(dataStorage);
-		this.apiUri = apiUri;
-		this.credentials = credentials;
-		this.driverInfo = driverInfo;
-		this.etsDao = dataStorage.getDao(ExecutableTestSuiteDto.class);
+	@Override
+	public ExecutableTestSuiteDto getExecutableTestSuiteById(final EID eid) {
+		return propagatedDtos.get(eid);
 	}
 
 	@Override
-	public void doInit()
-			throws ConfigurationException, InitializationException, InvalidStateTransitionException {
+	public void setLifeCycleListener(final ExecutableTestSuiteLifeCycleListener mediator) {
+		this.mediator = mediator;
+	}
+
+	private void addEts(final ExecutableTestSuiteDto ets) {
+		propagatedDtos.add(ets);
+		if (this.mediator != null) {
+			this.mediator.lifeCycleChange(this, ExecutableTestSuiteLifeCycleListener.EventType.CREATED,
+					DefaultEidHolderMap.singleton(ets));
+		}
+	}
+
+	@Override
+	public EidSet<? extends Dto> getTypes() {
+		return propagatedDtos.toSet();
+	}
+
+	@Override
+	public void release() {
+		propagatedDtos.clear();
+	}
+
+	private static class TeTypeBuilder implements TypeBuildingFileVisitor.TypeBuilder<ExecutableTestSuiteDto> {
+
+		@Override
+		public TypeBuildingFileVisitor.TypeBuilderCmd<ExecutableTestSuiteDto> prepare(final Path path) {
+			return null;
+		}
+	}
+
+	/**
+	 * Default constructor.
+	 */
+	public TeTypeLoader(final DataStorage dataStorageCallback, final URI apiUri,
+			final Credentials credentials, final ComponentInfo driverInfo) {
+		this.apiUri = apiUri;
+		this.credentials = credentials;
+		this.driverInfo = driverInfo;
+		this.dataStorageCallback = dataStorageCallback;
+		this.etsDao = dataStorageCallback.getDao(ExecutableTestSuiteDto.class);
+	}
+
+	@Override
+	public void init() throws ConfigurationException, InitializationException, InvalidStateTransitionException {
+		if (initialized == true) {
+			throw new InvalidStateTransitionException("Already initialized");
+		}
 
 		this.configProperties.expectAllRequiredPropertiesSet();
 
@@ -162,15 +207,27 @@ class TeTypeLoader extends EtsTypeLoader {
 			throw new InitializationException(e);
 		}
 
-		final List eTestSuites = initEts();
-		doAfterRegister(eTestSuites);
-		for (final Object ets : eTestSuites) {
+		final List<ExecutableTestSuiteDto> eTestSuitesToAdd = initEts();
+		for (final ExecutableTestSuiteDto ets : eTestSuitesToAdd) {
 			try {
-				((WriteDao<ExecutableTestSuiteDto>) etsDao).add((ExecutableTestSuiteDto) ets);
+				if (!etsDao.exists(ets.getId())) {
+					((WriteDao<ExecutableTestSuiteDto>) etsDao).replace(ets);
+				} else {
+					((WriteDao<ExecutableTestSuiteDto>) etsDao).add(ets);
+				}
 			} catch (StorageException e) {
-				throw new InitializationException("Could not add ETS", e);
+				throw new InitializationException("Could not add/update ETS", e);
+			} catch (ObjectWithIdNotFoundException e) {
+				throw new InitializationException("Could not update ETS", e);
 			}
 		}
+
+		this.initialized = true;
+	}
+
+	@Override
+	public final boolean isInitialized() {
+		return this.initialized;
 	}
 
 	private List<ExecutableTestSuiteDto> initEts() throws InitializationException {
@@ -195,7 +252,6 @@ class TeTypeLoader extends EtsTypeLoader {
 			final String etsOverview = UriUtils.loadAsString(suitesUri, credentials);
 			final Document etsOverviewDoc = Jsoup.parse(etsOverview);
 			final Elements etsUrls = etsOverviewDoc.select("body ul li a[href]");
-			final List<ExecutableTestSuiteDto> eTestSuites = new ArrayList<>();
 			for (final Element etsUrl : etsUrls) {
 				// Get single ETS
 				final String etsDetails;
@@ -215,14 +271,31 @@ class TeTypeLoader extends EtsTypeLoader {
 				} else {
 					logger.debug("Adding Executable Test Suite " + label);
 				}
-				final ExecutableTestSuiteDto ets = new ExecutableTestSuiteDto();
+				ExecutableTestSuiteDto ets = new ExecutableTestSuiteDto();
 				ets.setLabel(label);
 				ets.setReference(etsUrlStr);
 				ets.setRemoteResource(URI.create(etsUrlStr));
-				// Generate ID from url and title. As the URL includes the version,
-				// each ETS version gets an unique ID
-				ets.setId(EidFactory.getDefault().createUUID(etsUrlStr + label));
-				if (!etsDao.exists(ets.getId())) {
+				// The ETS ID is generated from the URL without the version
+				final String etsUrlWithoutVersion = UriUtils.getParent(etsUrlStr);
+				ets.setId(EidFactory.getDefault().createUUID(etsUrlWithoutVersion));
+				ets.setVersionFromStr(UriUtils.lastSegment(etsUrlStr));
+				// Check if an ETS already exists and if the version matches
+				boolean create = true;
+				if (etsDao.exists(ets.getId())) {
+					try {
+						final ExecutableTestSuiteDto etsComp = etsDao.getById(ets.getId()).getDto();
+						if (etsComp.getVersion().equals(ets.getVersion())) {
+							// version match, no update required. Check if the ETS is deactivated and reactivate it.
+							ets = etsComp;
+							etsComp.setDisabled(false);
+							addEts(ets);
+							create = false;
+						}
+					} catch (ObjectWithIdNotFoundException | StorageException e) {
+						logger.error("Could not compare old ETS", e);
+					}
+				}
+				if (create) {
 					final Element descriptionEl = etsDetailsDoc.select("body p").first();
 					final String description = descriptionEl != null ? descriptionEl.text()
 							: "No description provided by OGC TEAM Engine";
@@ -231,14 +304,13 @@ class TeTypeLoader extends EtsTypeLoader {
 					ets.setItemHash(SUtils.calcHash(description).getBytes());
 					ets.setLastEditor("Open Geospatial Consortium");
 					ets.setLastUpdateDateNow();
-					ets.setVersionFromStr(UriUtils.lastSegment(etsUrlStr));
 					ets.setTranslationTemplateBundle(TE_TRANSLATION_TEMPLATE_BUNDLE);
 					ets.setTestDriver(new ComponentDto(driverInfo));
 					ets.setSupportedTestObjectTypes(TE_SUPPORTED_TEST_OBJECT_TYPES.asList());
-					eTestSuites.add(ets);
+					addEts(ets);
 				}
 			}
-			return eTestSuites;
+			return propagatedDtos.asList();
 		} catch (final IOException e) {
 			throw new InitializationException("Could not retrieve Executable Test Suites with"
 					+ " TEAM Engine application web interface ", e);
@@ -312,6 +384,7 @@ class TeTypeLoader extends EtsTypeLoader {
 			}
 			executableTestSuite.addTestModule(testModuleDto);
 		}
+		propagatedDtos.add(executableTestSuite);
 		((WriteDao) etsDao).replace(executableTestSuite);
 		return true;
 	}
@@ -339,4 +412,5 @@ class TeTypeLoader extends EtsTypeLoader {
 	public ConfigPropertyHolder getConfigurationProperties() {
 		return configProperties;
 	}
+
 }

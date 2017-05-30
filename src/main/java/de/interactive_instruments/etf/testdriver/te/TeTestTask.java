@@ -18,13 +18,19 @@ package de.interactive_instruments.etf.testdriver.te;
 import static org.w3c.dom.Node.ELEMENT_NODE;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collections;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
+import de.interactive_instruments.exceptions.ExcUtils;
 import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -45,7 +51,7 @@ import de.interactive_instruments.exceptions.config.ConfigurationException;
 /**
  * TEAM Engine test run task for executing test remotly on the OGC TEAM Engine.
  *
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
 class TeTestTask<T extends Dto> extends AbstractTestTask {
 
@@ -93,11 +99,57 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 		try {
 			result = builder.parse(UriUtils.openStream(new URI(apiUri), credentials, timeout));
 		} catch (UriUtils.ServerException e) {
-			if (e.getResponseMessage() != null) {
-				getLogger().info("OGC TEAM Engine returned an error: '" + e.getResponseMessage() + "'");
+			getLogger().info("OGC TEAM Engine returned an error:");
+
+			final String htmlErrorMessage = e.getErrorMessage();
+			resultCollector.saveAttachment(IOUtils.toInputStream(
+					htmlErrorMessage, "UTF-8"), "ErrorMessage", null,
+					"ErrorMessage");
+			String errorMessage = null;
+			if(htmlErrorMessage!=null) {
+				try {
+					final org.jsoup.nodes.Document doc = Jsoup.parse(htmlErrorMessage);
+					if(doc!=null) {
+						final Elements errors = doc.select("body p");
+						if(errors!=null) {
+							final StringBuilder errorMessageBuilder = new StringBuilder();
+							for (final org.jsoup.nodes.Element error : errors) {
+								errorMessageBuilder.append(error.text()).append(SUtils.ENDL);
+							}
+							errorMessage = errorMessageBuilder.toString();
+							resultCollector.internalError(
+									("OGC TEAM Engine returned "+String.valueOf(e.getResponseCode())),
+									errorMessage.getBytes(),
+									"text/html");
+						}
+					}
+				}catch (Exception ign) {
+					ExcUtils.suppress(ign);
+				}
+			}
+			if(errorMessage!=null) {
+				getLogger().error(errorMessage);
+			}else{
+				getLogger().error("Response message: "+e.getResponseMessage());
+				getLogger().error("Response code: "+e.getResponseCode());
+				getLogger().error("Invoked endpoint: "+apiUri);
+			}
+			throw e;
+		} catch (final SocketTimeoutException e) {
+			getLogger().info("The OGC TEAM Engine is taking too long to respond.");
+			getLogger().info("Checking availability...");
+			if(UriUtils.exists(new URI(
+					testTaskDto.getExecutableTestSuite().getRemoteResource().toString()), credentials)) {
+				getLogger().info("...[OK]. The OGC TEAM Engine is available. "
+						+ "You may need to ask the system administrator to "
+						+ "increase the OGC TEAM Engine test driver timeout.");
+			}else{
+				getLogger().info("...[FAILED]. The OGC TEAM Engine is not available. "
+						+ "Try re-running the test after a few minutes.");
 			}
 			throw e;
 		}
+
 		getLogger().info("Results received.");
 		((TeTestTaskProgress) progress).stepCompleted();
 
@@ -153,51 +205,63 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 				for (Node testStep = firstTestStep; testStep != null; testStep = XmlUtils.getNextSiblingOfType(testStep,
 						ELEMENT_NODE, "test-method")) {
 
-					final long testStepStartTimestamp = getStartTimestamp(testStep);
-					final String testStepId = getItemID(testStep);
-					resultCollector.startTestStep(testStepId, testStepStartTimestamp);
-					// Pseudo Assertion
+					final int status = mapStatus(testStep);
+					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "started-at", "false"));
+					if(!configStep || status!=0) {
+
+						final long testStepStartTimestamp = getStartTimestamp(testStep);
+						final String testStepId = getItemID(testStep);
+						resultCollector.startTestStep(testStepId, testStepStartTimestamp);
+						final long testStepEndTimestamp = getEndTimestamp(testStep);
+
+						// Pseudo Assertion
+					/*
 					final String assertionId = getAssertionID(testStep);
 					resultCollector.startTestAssertion(assertionId, testStepStartTimestamp);
+					*/
 
-					final String message = getMessage(testStep);
-					if (!SUtils.isNullOrEmpty(message)) {
-						resultCollector.addMessage("TR.teamEngineError", "error", message);
-					}
+						final String message = getMessage(testStep);
+						if (!SUtils.isNullOrEmpty(message)) {
+							resultCollector.addMessage("TR.teamEngineError", "error", message);
+						}
+						// Pseudo Assertion end
+					/*
+					resultCollector.end(assertionId, mapStatus(testStep), testStepEndTimestamp);
+					*/
 
-					// Attachments
-					for (Node attachments = XmlUtils.getFirstChildNodeOfType(testStep, ELEMENT_NODE,
-							"attributes"); attachments != null; attachments = XmlUtils.getNextSiblingOfType(attachments,
-									ELEMENT_NODE, "attributes")) {
-						for (Node attachment = XmlUtils.getFirstChildNodeOfType(attachments, ELEMENT_NODE,
-								"attribute"); attachment != null; attachment = XmlUtils.getNextSiblingOfType(attachment,
-										ELEMENT_NODE, "attribute")) {
-							final String type = XmlUtils.getAttribute(attachment, "name");
-							switch (type) {
-							case "response":
-								resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Service Response", null,
-										"ServiceResponse");
-								break;
-							case "request":
-								final String request = XmlUtils.nodeValue(attachment);
-								if (XmlUtils.isXml(request)) {
+						// Attachments
+						for (Node attachments = XmlUtils.getFirstChildNodeOfType(testStep, ELEMENT_NODE,
+								"attributes"); attachments != null; attachments = XmlUtils.getNextSiblingOfType(attachments,
+								ELEMENT_NODE, "attributes")) {
+							for (Node attachment = XmlUtils.getFirstChildNodeOfType(attachments, ELEMENT_NODE,
+									"attribute"); attachment != null; attachment = XmlUtils.getNextSiblingOfType(attachment,
+									ELEMENT_NODE, "attribute")) {
+								final String type = XmlUtils.getAttribute(attachment, "name");
+								switch (type) {
+								case "response":
 									resultCollector.saveAttachment(IOUtils.toInputStream(
-											XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", null,
-											"PostParameter");
-								} else {
-									resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter", null,
-											"GetParameter");
+											XmlUtils.nodeValue(attachment), "UTF-8"), "Service Response", null,
+											"ServiceResponse");
+									break;
+								case "request":
+									final String request = XmlUtils.nodeValue(attachment);
+									if (XmlUtils.isXml(request)) {
+										resultCollector.saveAttachment(IOUtils.toInputStream(
+												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", null,
+												"PostParameter");
+									} else {
+										resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter", null,
+												"GetParameter");
+									}
+									break;
+								default:
+									resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), type, null, type);
 								}
-								break;
-							default:
-								resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), type, null, type);
 							}
 						}
+						resultCollector.end(testStepId, status, testStepEndTimestamp);
+						lastTestStep = testStep;
 					}
-					final long assertionEndTimestamp = getEndTimestamp(testStep);
-					resultCollector.end(assertionId, mapStatus(testStep), assertionEndTimestamp);
-					resultCollector.end(testStepId, assertionEndTimestamp);
-					lastTestStep = testStep;
 				}
 				if (lastTestStep != null) {
 					// Get end timestamp from last test step

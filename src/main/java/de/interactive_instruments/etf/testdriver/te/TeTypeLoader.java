@@ -210,15 +210,11 @@ class TeTypeLoader implements EtsTypeLoader {
 		final List<ExecutableTestSuiteDto> eTestSuitesToAdd = initEts();
 		for (final ExecutableTestSuiteDto ets : eTestSuitesToAdd) {
 			try {
-				if (!etsDao.exists(ets.getId())) {
-					((WriteDao<ExecutableTestSuiteDto>) etsDao).replace(ets);
-				} else {
+				if (!etsDao.exists(ets.getId()) || etsDao.isDisabled(ets.getId())) {
 					((WriteDao<ExecutableTestSuiteDto>) etsDao).add(ets);
 				}
 			} catch (StorageException e) {
-				throw new InitializationException("Could not add/update ETS", e);
-			} catch (ObjectWithIdNotFoundException e) {
-				throw new InitializationException("Could not update ETS", e);
+				throw new InitializationException("Could not add/update ETS: ", e);
 			}
 		}
 

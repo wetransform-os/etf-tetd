@@ -15,7 +15,10 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
+import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.FAILED;
+import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.UNDEFINED;
 import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TEST_DRIVER_EID;
+import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TIMEOUT_SEC;
 import static de.interactive_instruments.etf.testdriver.te.TeTestUtils.DATA_STORAGE;
 import static org.junit.Assert.*;
 
@@ -32,7 +35,11 @@ import java.util.concurrent.ExecutionException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import de.interactive_instruments.SUtils;
+import de.interactive_instruments.etf.dal.dao.Dao;
+import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -63,22 +70,21 @@ import de.interactive_instruments.properties.PropertyUtils;
 /**
  *
  *
- * @author J. Herrmann ( herrmann <aT) interactive-instruments (doT> de )
+ * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TeTestRunTaskFactoryTest {
 
 	// DO NOT RUN THE TESTS IN THE IDE BUT WITH GRADLE
 
-	private TestDriverManager testDriverManager = null;
+	private static TestDriverManager testDriverManager = null;
 
 	private final static String VERSION = "1.26";
 	private final static String LABEL = "WFS 2.0 (OGC 09-025r2/ISO 19142) Conformance Test Suite";
 	private final static EID wfs20EtsId = EidFactory.getDefault().createUUID(
-			"http://cite.opengeospatial.org/teamengine/rest/suites/wfs20/" + VERSION + "/" +
-					LABEL);
+			"http://cite.opengeospatial.org/teamengine/rest/suites/wfs20/");
 
-	private WriteDao<ExecutableTestSuiteDto> etsDao() {
+	private static WriteDao<ExecutableTestSuiteDto> etsDao() {
 		return ((WriteDao) DATA_STORAGE.getDao(ExecutableTestSuiteDto.class));
 	}
 
@@ -101,11 +107,8 @@ public class TeTestRunTaskFactoryTest {
 		testObjectDto.setRemoteResource(URI.create("http://none"));
 		testObjectDto.setItemHash(new byte[]{'0'});
 		testObjectDto.setLocalPath("/none");
-		try {
-			((WriteDao) DATA_STORAGE.getDao(TestObjectDto.class)).delete(testObjectDto.getId());
-		} catch (Exception e) {
-			ExcUtils.suppress(e);
-		}
+
+		((WriteDao) DATA_STORAGE.getDao(TestObjectDto.class)).deleteAllExisting(Collections.singleton(testObjectDto.getId()));
 		((WriteDao) DATA_STORAGE.getDao(TestObjectDto.class)).add(testObjectDto);
 
 		final ExecutableTestSuiteDto ets = DATA_STORAGE.getDao(ExecutableTestSuiteDto.class).getById(wfs20EtsId).getDto();
@@ -117,22 +120,28 @@ public class TeTestRunTaskFactoryTest {
 
 		final TestRunDto testRunDto = new TestRunDto();
 		testRunDto.setDefaultLang("en");
-		testRunDto.setId(EidFactory.getDefault().createAndPreserveStr("7be08620-1805-4aca-840f-ac4dea2c4251"));
+		testRunDto.setId(EidFactory.getDefault().createRandomId());
 		testRunDto.setLabel("Run label");
 		testRunDto.setStartTimestamp(new Date(0));
 		testRunDto.addTestTask(testTaskDto);
+
+		try {
+			((WriteDao) DATA_STORAGE.getDao(TestRunDto.class)).deleteAllExisting(Collections.singleton(testRunDto.getId()));
+		} catch (Exception e) {
+			ExcUtils.suppress(e);
+		}
 		return testRunDto;
 	}
 
-	@Before
-	public void setUp()
+	@BeforeClass
+	public static void setUp()
 			throws IOException, ConfigurationException, InvalidStateTransitionException,
 			InitializationException, ObjectWithIdNotFoundException, StorageException {
 
 		// DO NOT RUN THE TESTS IN THE IDE BUT WITH GRADLE
 
 		// Init logger
-		LoggerFactory.getLogger(this.getClass()).info("Started");
+		LoggerFactory.getLogger(TeTestRunTaskFactoryTest.class).info("Started");
 
 		TeTestUtils.ensureInitialization();
 		if (testDriverManager == null) {
@@ -174,7 +183,7 @@ public class TeTestRunTaskFactoryTest {
 
 	@Test
 	public void T1_checkInitializedEts() throws Exception, ComponentNotLoadedException {
-		assertTrue(etsDao().exists(wfs20EtsId));
+		assertTrue(etsDao().available(wfs20EtsId));
 
 		final ExecutableTestSuiteDto ets = etsDao().getById(wfs20EtsId).getDto();
 		assertEquals(LABEL, ets.getLabel());
@@ -202,20 +211,8 @@ public class TeTestRunTaskFactoryTest {
 		method.invoke(task, result);
 	}
 
-	@Test(expected = ExecutionException.class)
-	public void T3_runTestInvalidUrl() throws Exception, ComponentNotLoadedException {
-		final String testUrl = "http://example.com";
-		TestRunDto testRunDto = createTestRunDtoForProject(testUrl);
-
-		final TestRun testRun = testDriverManager.createTestRun(testRunDto);
-		final TaskPoolRegistry<TestRunDto, TestRun> taskPoolRegistry = new TaskPoolRegistry<>(1, 1);
-		testRun.init();
-		taskPoolRegistry.submitTask(testRun);
-		taskPoolRegistry.getTaskById(testRunDto.getId()).waitForResult();
-	}
-
 	@Test
-	public void T4_runTest() throws Exception, ComponentNotLoadedException {
+	public void T3_runTest() throws Exception, ComponentNotLoadedException {
 
 		final String testUrl = "https://services.interactive-instruments.de/cite-xs-46/simpledemo/cgi-bin/cities-postgresql/wfs?request=GetCapabilities&service=wfs";
 		TestRunDto testRunDto = createTestRunDtoForProject(testUrl);
@@ -229,6 +226,56 @@ public class TeTestRunTaskFactoryTest {
 		assertNotNull(runResult);
 		assertNotNull(runResult.getTestTaskResults());
 		assertFalse(runResult.getTestTaskResults().isEmpty());
+	}
+
+	@Test
+	public void T4_runTestInvalidUrl() throws Exception, ComponentNotLoadedException {
+		final String testUrl = "http://example.com";
+		TestRunDto testRunDto = createTestRunDtoForProject(testUrl);
+
+		final TestRun testRun = testDriverManager.createTestRun(testRunDto);
+		final TaskPoolRegistry<TestRunDto, TestRun> taskPoolRegistry = new TaskPoolRegistry<>(1, 1);
+		testRun.init();
+		taskPoolRegistry.submitTask(testRun);
+
+		final TestRunDto runResult = taskPoolRegistry.getTaskById(testRunDto.getId()).waitForResult();
+		assertNotNull(runResult);
+		final TestTaskResultDto result = runResult.getTestTasks().get(0).getTestTaskResult();
+		assertEquals(UNDEFINED, result.getResultStatus());
+		assertFalse(SUtils.isNullOrEmpty(result.getErrorMessage()));
+		assertTrue(result.getErrorMessage().contains("OGC TEAM Engine returned HTTP status code"));
+		assertEquals(2, result.getAttachments().size());
+		assertTrue(result.getTestModuleResults().isEmpty());
+	}
+
+	// @Test(timeout = 90)
+	@Test
+	public void T5_timeoutTest() throws Exception, ComponentNotLoadedException {
+
+		final String testUrl = "https://services.interactive-instruments.de/cite-xs-46/simpledemo/cgi-bin/cities-postgresql/wfs?request=GetCapabilities&service=wfs";
+		final TestRunDto testRunDto = createTestRunDtoForProject(testUrl);
+
+		final String timeout = "10";
+
+		testDriverManager.release();
+		testDriverManager.getConfigurationProperties().setProperty(TE_TIMEOUT_SEC, timeout);
+		assertEquals(timeout, testDriverManager.getConfigurationProperties().getProperty(TE_TIMEOUT_SEC));
+		testDriverManager.init();
+		testDriverManager.load(EidFactory.getDefault().createAndPreserveStr(TE_TEST_DRIVER_EID));
+
+		final TestRun testRun = testDriverManager.createTestRun(testRunDto);
+		final TaskPoolRegistry<TestRunDto, TestRun> taskPoolRegistry = new TaskPoolRegistry<>(1, 1);
+		testRun.init();
+		taskPoolRegistry.submitTask(testRun);
+
+		final TestRunDto runResult = taskPoolRegistry.getTaskById(testRunDto.getId()).waitForResult();
+		assertNotNull(runResult);
+		final TestTaskResultDto result = runResult.getTestTasks().get(0).getTestTaskResult();
+		assertEquals(UNDEFINED, result.getResultStatus());
+		assertFalse(SUtils.isNullOrEmpty(result.getErrorMessage()));
+		assertTrue(result.getErrorMessage().contains("OGC TEAM Engine is taking too long to respond. Timeout after "+timeout));
+		assertEquals(1, result.getAttachments().size());
+		assertTrue(result.getTestModuleResults().isEmpty());
 	}
 
 }

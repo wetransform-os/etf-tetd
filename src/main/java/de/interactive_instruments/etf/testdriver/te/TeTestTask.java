@@ -25,6 +25,7 @@ import java.util.Collections;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import de.interactive_instruments.exceptions.*;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -42,10 +43,6 @@ import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;
 import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
-import de.interactive_instruments.exceptions.ExcUtils;
-import de.interactive_instruments.exceptions.InitializationException;
-import de.interactive_instruments.exceptions.InvalidStateTransitionException;
-import de.interactive_instruments.exceptions.ParseException;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
 
 /**
@@ -92,19 +89,17 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 						endpoint.replace("&", "%26")));
 		getLogger().info("Invoking TEAM Engine remotely. This may take a while. "
 				+ "Progress messages are not supported.");
-		getLogger().info("Timeout is set to: " + TimeUtils.milisAsMinsSeconds(timeout));
+		final String timeoutStr = TimeUtils.milisAsMinsSeconds(timeout);
+		getLogger().info("Timeout is set to: " + timeoutStr);
 		((TeTestTaskProgress) progress).stepCompleted();
 
 		final Document result;
 		try {
 			result = builder.parse(UriUtils.openStream(new URI(apiUri), credentials, timeout));
-		} catch (UriUtils.ServerException e) {
-			getLogger().info("OGC TEAM Engine returned an error:");
+		} catch (UriUtils.ConnectionException e) {
+			getLogger().info("OGC TEAM Engine returned an error.");
 
 			final String htmlErrorMessage = e.getErrorMessage();
-			resultCollector.saveAttachment(IOUtils.toInputStream(
-					htmlErrorMessage, "UTF-8"), "ErrorMessage", null,
-					"ErrorMessage");
 			String errorMessage = null;
 			if (htmlErrorMessage != null) {
 				try {
@@ -117,9 +112,9 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 								errorMessageBuilder.append(error.text()).append(SUtils.ENDL);
 							}
 							errorMessage = errorMessageBuilder.toString();
-							resultCollector.internalError(
-									("OGC TEAM Engine returned " + String.valueOf(e.getResponseCode())),
-									errorMessage.getBytes(),
+							reportError(
+									"OGC TEAM Engine returned HTTP status code: " + String.valueOf(e.getResponseMessage()+". Message: "+errorMessage),
+									htmlErrorMessage.getBytes(),
 									"text/html");
 						}
 					}
@@ -128,11 +123,12 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 				}
 			}
 			if (errorMessage != null) {
-				getLogger().error(errorMessage);
+				getLogger().error("Error message: {}", errorMessage);
 			} else {
 				getLogger().error("Response message: " + e.getResponseMessage());
-				getLogger().error("Response code: " + e.getResponseCode());
-				getLogger().error("Invoked endpoint: " + apiUri);
+				reportError(
+						"OGC TEAM Engine returned an error: " +
+								String.valueOf(e.getResponseMessage()), null, null);
 			}
 			throw e;
 		} catch (final SocketTimeoutException e) {
@@ -147,6 +143,9 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 				getLogger().info("...[FAILED]. The OGC TEAM Engine is not available. "
 						+ "Try re-running the test after a few minutes.");
 			}
+			reportError(
+					"OGC TEAM Engine is taking too long to respond. "
+							+ "Timeout after "+timeoutStr + ".", null, null);
 			throw e;
 		}
 
@@ -163,6 +162,13 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 		testTaskDto.setTestTaskResult(
 				dataStorageCallback.getDao(TestTaskResultDto.class).getById(
 						EidFactory.getDefault().createAndPreserveStr(resultCollector.getTestTaskResultId())).getDto());
+	}
+
+	private void reportError(final String errorMesg, final byte[] data, final String mimeType) throws ObjectWithIdNotFoundException, StorageException {
+		final String id = resultCollector.internalError(errorMesg, data, mimeType);
+		testTaskDto.setTestTaskResult(
+				dataStorageCallback.getDao(TestTaskResultDto.class).getById(
+						EidFactory.getDefault().createAndPreserveStr(id)).getDto());
 	}
 
 	private void parseTestNgResult(final Document document) throws Exception {

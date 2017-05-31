@@ -27,10 +27,11 @@ apply from: 'build/gradle/ii-bda.gradle'
 group = 'de.interactive_instruments.etf.testdriver'
 description = "ETF Team Engine test driver"
 
+ext.testDeploymentDir = project.file('./build/tmp/td')
 
-ext.testDataDir = project.hasProperty('etf.td.deployment.dir') ?
+ext.deploymentDir = project.hasProperty('etf.td.deployment.dir') ?
 		project.getProperty('etf.td.deployment.dir') :
-		project.file('./build/tmp/td')
+		testDeploymentDir
 
 ext.testDataStorageDir = project.hasProperty('etf.ds.dir') ?
 		project.getProperty('etf.ds.dir') :
@@ -94,20 +95,30 @@ jar {
 	}
 }
 
-task copyTdToTdDir(dependsOn: jar) << {
+task deployTestDriver(dependsOn: jar) << {
 	copy {
 		from jar
-		into "$testDataDir"
+		into "$deploymentDir"
 	}
-	println "Copied test driver to $testDataDir"
+	println "Copied test driver to $deploymentDir"
 }
 
 install {
-	dependsOn = ["copyTdToTdDir"]
+	dependsOn = ["deployTestDriver"]
 }
 
-// INTEGRATION TESTS
+// INTEGRATION TESTING
 ///////////////////////////////////////////////////////////////////////////////////////
+
+
+task deployTestDriverForIntegrationTesting(dependsOn: jar) << {
+	group 'verification'
+	copy {
+		from jar
+		into "$testDeploymentDir"
+	}
+	println "Copied test driver to $testDeploymentDir"
+}
 
 // Drop classloader for integration tests
 sourceSets {
@@ -120,9 +131,7 @@ sourceSets {
 }
 
 test {
-	environment "ETF_DS_DIR", testDataStorageDir
-	environment "ETF_TD_DEPLOYMENT_DIR", testDataDir
-	dependsOn = ["compileTestJava", "copyTdToTdDir"]
+	dependsOn = ["compileTestJava", "deployTestDriverForIntegrationTesting"]
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////

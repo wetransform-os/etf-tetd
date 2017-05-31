@@ -25,7 +25,6 @@ import java.util.Collections;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import de.interactive_instruments.exceptions.*;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -43,6 +42,7 @@ import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;
 import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
+import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
 
 /**
@@ -113,7 +113,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 							}
 							errorMessage = errorMessageBuilder.toString();
 							reportError(
-									"OGC TEAM Engine returned HTTP status code: " + String.valueOf(e.getResponseMessage()+". Message: "+errorMessage),
+									"OGC TEAM Engine returned HTTP status code: "
+											+ String.valueOf(e.getResponseMessage() + ". Message: " + errorMessage),
 									htmlErrorMessage.getBytes(),
 									"text/html");
 						}
@@ -128,7 +129,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 				getLogger().error("Response message: " + e.getResponseMessage());
 				reportError(
 						"OGC TEAM Engine returned an error: " +
-								String.valueOf(e.getResponseMessage()), null, null);
+								String.valueOf(e.getResponseMessage()),
+						null, null);
 			}
 			throw e;
 		} catch (final SocketTimeoutException e) {
@@ -145,7 +147,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 			}
 			reportError(
 					"OGC TEAM Engine is taking too long to respond. "
-							+ "Timeout after "+timeoutStr + ".", null, null);
+							+ "Timeout after " + timeoutStr + ".",
+					null, null);
 			throw e;
 		}
 
@@ -164,7 +167,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 						EidFactory.getDefault().createAndPreserveStr(resultCollector.getTestTaskResultId())).getDto());
 	}
 
-	private void reportError(final String errorMesg, final byte[] data, final String mimeType) throws ObjectWithIdNotFoundException, StorageException {
+	private void reportError(final String errorMesg, final byte[] data, final String mimeType)
+			throws ObjectWithIdNotFoundException, StorageException {
 		final String id = resultCollector.internalError(errorMesg, data, mimeType);
 		testTaskDto.setTestTaskResult(
 				dataStorageCallback.getDao(TestTaskResultDto.class).getById(

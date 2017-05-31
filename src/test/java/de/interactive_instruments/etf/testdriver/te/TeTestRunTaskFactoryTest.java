@@ -35,9 +35,6 @@ import java.util.concurrent.ExecutionException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import de.interactive_instruments.SUtils;
-import de.interactive_instruments.etf.dal.dao.Dao;
-import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -47,14 +44,17 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import de.interactive_instruments.IFile;
+import de.interactive_instruments.SUtils;
 import de.interactive_instruments.UriUtils;
 import de.interactive_instruments.etf.EtfConstants;
 import de.interactive_instruments.etf.component.ComponentNotLoadedException;
+import de.interactive_instruments.etf.dal.dao.Dao;
 import de.interactive_instruments.etf.dal.dao.WriteDao;
 import de.interactive_instruments.etf.dal.dao.basex.BsxDataStorage;
 import de.interactive_instruments.etf.dal.dto.capabilities.ResourceDto;
 import de.interactive_instruments.etf.dal.dto.capabilities.TestObjectDto;
 import de.interactive_instruments.etf.dal.dto.capabilities.TestObjectTypeDto;
+import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import de.interactive_instruments.etf.dal.dto.run.TestRunDto;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.dal.dto.test.ExecutableTestSuiteDto;
@@ -273,7 +273,8 @@ public class TeTestRunTaskFactoryTest {
 		final TestTaskResultDto result = runResult.getTestTasks().get(0).getTestTaskResult();
 		assertEquals(UNDEFINED, result.getResultStatus());
 		assertFalse(SUtils.isNullOrEmpty(result.getErrorMessage()));
-		assertTrue(result.getErrorMessage().contains("OGC TEAM Engine is taking too long to respond. Timeout after "+timeout));
+		assertTrue(
+				result.getErrorMessage().contains("OGC TEAM Engine is taking too long to respond. Timeout after " + timeout));
 		assertEquals(1, result.getAttachments().size());
 		assertTrue(result.getTestModuleResults().isEmpty());
 	}

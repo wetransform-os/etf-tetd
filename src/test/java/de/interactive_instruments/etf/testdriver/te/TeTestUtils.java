@@ -37,17 +37,10 @@ public class TeTestUtils {
 	static BsxDataStorage DATA_STORAGE = new BsxDataStorage();
 
 	static void ensureInitialization() throws ConfigurationException, InvalidStateTransitionException, InitializationException,
-			StorageException, IOException {
+			IOException {
 		if (!DATA_STORAGE.isInitialized()) {
-			if (System.getenv("ETF_DS_DIR") != null) {
-				DATA_STORAGE_DIR = new IFile(System.getenv("ETF_DS_DIR"));
-				DATA_STORAGE_DIR.mkdirs();
-			} else if (new IFile("./build").exists()) {
-				DATA_STORAGE_DIR = new IFile("./build/tmp/etf-ds");
-				DATA_STORAGE_DIR.mkdirs();
-			} else {
-				DATA_STORAGE_DIR = null;
-			}
+			DATA_STORAGE_DIR = new IFile("./build/tmp/etf-ds");
+			DATA_STORAGE_DIR.mkdirs();
 
 			assertTrue(DATA_STORAGE_DIR != null && DATA_STORAGE_DIR.exists());
 			DATA_STORAGE.getConfigurationProperties().setProperty(EtfConstants.ETF_DATASOURCE_DIR,

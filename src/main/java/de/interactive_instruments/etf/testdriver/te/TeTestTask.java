@@ -25,6 +25,7 @@ import java.util.Collections;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import de.interactive_instruments.etf.testdriver.TestResultCollector;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -50,12 +51,11 @@ import de.interactive_instruments.exceptions.config.ConfigurationException;
  *
  * @author Jon Herrmann ( herrmann aT interactive-instruments doT de )
  */
-class TeTestTask<T extends Dto> extends AbstractTestTask {
+class TeTestTask extends AbstractTestTask {
 
 	private final int timeout;
 	private final Credentials credentials;
 	private final TeTypeLoader typeLoader;
-	private final DataStorage dataStorageCallback;
 	private final String etsSpecificPrefix;
 
 	/**
@@ -64,12 +64,11 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 	 * @throws IOException I/O error
 	 */
 	public TeTestTask(final int timeout, final Credentials credentials, final TeTypeLoader typeLoader,
-			final TestTaskDto testTaskDto, final DataStorage dataStorageCallback) {
+			final TestTaskDto testTaskDto) {
 		super(testTaskDto, new TeTestTaskProgress(), TeTestTask.class.getClassLoader());
 		this.timeout = timeout;
 		this.credentials = credentials;
 		this.typeLoader = typeLoader;
-		this.dataStorageCallback = dataStorageCallback;
 		etsSpecificPrefix = testTaskDto.getExecutableTestSuite().getId().getId() +
 				testTaskDto.getExecutableTestSuite().getLabel();
 	}
@@ -112,11 +111,6 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 								errorMessageBuilder.append(error.text()).append(SUtils.ENDL);
 							}
 							errorMessage = errorMessageBuilder.toString();
-							reportError(
-									"OGC TEAM Engine returned HTTP status code: "
-											+ String.valueOf(e.getResponseMessage() + ". Message: " + errorMessage),
-									htmlErrorMessage.getBytes(),
-									"text/html");
 						}
 					}
 				} catch (Exception ign) {
@@ -125,6 +119,11 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 			}
 			if (errorMessage != null) {
 				getLogger().error("Error message: {}", errorMessage);
+				reportError(
+						"OGC TEAM Engine returned HTTP status code: "
+								+ String.valueOf(e.getResponseMessage() + ". Message: " + errorMessage),
+						htmlErrorMessage.getBytes(),
+						"text/html");
 			} else {
 				getLogger().error("Response message: " + e.getResponseMessage());
 				reportError(
@@ -161,18 +160,11 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 
 		parseTestNgResult(result);
 		((TeTestTaskProgress) progress).stepCompleted();
-
-		testTaskDto.setTestTaskResult(
-				dataStorageCallback.getDao(TestTaskResultDto.class).getById(
-						EidFactory.getDefault().createAndPreserveStr(resultCollector.getTestTaskResultId())).getDto());
 	}
 
 	private void reportError(final String errorMesg, final byte[] data, final String mimeType)
 			throws ObjectWithIdNotFoundException, StorageException {
-		final String id = resultCollector.internalError(errorMesg, data, mimeType);
-		testTaskDto.setTestTaskResult(
-				dataStorageCallback.getDao(TestTaskResultDto.class).getById(
-						EidFactory.getDefault().createAndPreserveStr(id)).getDto());
+		getCollector().internalError(errorMesg, data, mimeType);
 	}
 
 	private void parseTestNgResult(final Document document) throws Exception {
@@ -187,6 +179,8 @@ class TeTestTask<T extends Dto> extends AbstractTestTask {
 		final Integer passedAssertionsInt = Integer.valueOf(passedAssertions);
 		getLogger().info("{} of {} assertions passed", passedAssertionsInt,
 				Integer.valueOf(passedAssertions + Integer.valueOf(failedAssertions)));
+
+		final TestResultCollector resultCollector = getCollector();
 
 		final Node suiteResult = XmlUtils.getFirstChildNodeOfType(result, ELEMENT_NODE, "suite");
 		resultCollector.startTestTask(testTaskDto.getExecutableTestSuite().getId().getId(), getStartTimestamp(suiteResult));

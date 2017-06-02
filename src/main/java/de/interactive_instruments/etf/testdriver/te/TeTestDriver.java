@@ -124,7 +124,7 @@ public class TeTestDriver extends AbstractTestDriver {
 			testTaskDto.setTestTaskResult(testTaskResult);
 			return new TeTestTask(
 					(int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 1200)),
-					credentials, (TeTypeLoader) typeLoader, testTaskDto, dataStorageCallback);
+					credentials, (TeTypeLoader) typeLoader, testTaskDto);
 		} catch (IncompleteDtoException e) {
 			throw new TestTaskInitializationException(e);
 		} catch (InvalidPropertyException e) {

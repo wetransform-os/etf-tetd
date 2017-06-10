@@ -15,36 +15,37 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
-import static org.w3c.dom.Node.ELEMENT_NODE;
-
-import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.util.Collections;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import de.interactive_instruments.etf.testdriver.TestResultCollector;
-import org.apache.commons.io.IOUtils;
-import org.jsoup.Jsoup;
-import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import de.interactive_instruments.*;
-import de.interactive_instruments.etf.dal.dao.DataStorage;
-import de.interactive_instruments.etf.dal.dto.Dto;
-import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
-import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;
 import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
+import de.interactive_instruments.etf.testdriver.TestResultCollector;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
+import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.select.Elements;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.util.Collections;
+
+import static org.w3c.dom.Node.ELEMENT_NODE;
 
 /**
  * TEAM Engine test run task for executing test remotly on the OGC TEAM Engine.
@@ -185,6 +186,14 @@ class TeTestTask extends AbstractTestTask {
 		final Node suiteResult = XmlUtils.getFirstChildNodeOfType(result, ELEMENT_NODE, "suite");
 		resultCollector.startTestTask(testTaskDto.getExecutableTestSuite().getId().getId(), getStartTimestamp(suiteResult));
 
+		// Save result document as attachment
+		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		final Source xmlSource = new DOMSource(document);
+		final Result outputTarget = new StreamResult(outputStream);
+		TransformerFactory.newInstance().newTransformer().transform(xmlSource, outputTarget);
+		final InputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
+		resultCollector.saveAttachment(inputStream, "TEAM Engine result", "text/xml", "JunitXml");
+
 		// Test Modules
 		for (Node testModule = XmlUtils.getFirstChildNodeOfType(suiteResult, ELEMENT_NODE,
 				"test"); testModule != null; testModule = XmlUtils.getNextSiblingOfType(testModule, ELEMENT_NODE, "test")) {
@@ -205,7 +214,7 @@ class TeTestTask extends AbstractTestTask {
 				}
 				Node lastTestStep = null;
 
-				// Test Steps
+				// Test Steps (no Test Assertions are used)
 				for (Node testStep = firstTestStep; testStep != null; testStep = XmlUtils.getNextSiblingOfType(testStep,
 						ELEMENT_NODE, "test-method")) {
 
@@ -218,20 +227,10 @@ class TeTestTask extends AbstractTestTask {
 						resultCollector.startTestStep(testStepId, testStepStartTimestamp);
 						final long testStepEndTimestamp = getEndTimestamp(testStep);
 
-						// Pseudo Assertion
-						/*
-						final String assertionId = getAssertionID(testStep);
-						resultCollector.startTestAssertion(assertionId, testStepStartTimestamp);
-						*/
-
 						final String message = getMessage(testStep);
 						if (!SUtils.isNullOrEmpty(message)) {
 							resultCollector.addMessage("TR.teamEngineError", "error", message);
 						}
-						// Pseudo Assertion end
-						/*
-						resultCollector.end(assertionId, mapStatus(testStep), testStepEndTimestamp);
-						*/
 
 						// Attachments
 						for (Node attachments = XmlUtils.getFirstChildNodeOfType(testStep, ELEMENT_NODE,

@@ -15,28 +15,8 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
-import de.interactive_instruments.*;
-import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
-import de.interactive_instruments.etf.model.EidFactory;
-import de.interactive_instruments.etf.testdriver.AbstractTestTask;
-import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
-import de.interactive_instruments.etf.testdriver.TestResultCollector;
-import de.interactive_instruments.exceptions.*;
-import de.interactive_instruments.exceptions.config.ConfigurationException;
-import org.apache.commons.io.IOUtils;
-import org.jsoup.Jsoup;
-import org.jsoup.select.Elements;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
+import static org.w3c.dom.Node.ELEMENT_NODE;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,7 +25,29 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collections;
 
-import static org.w3c.dom.Node.ELEMENT_NODE;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.select.Elements;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
+import de.interactive_instruments.*;
+import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
+import de.interactive_instruments.etf.model.EidFactory;
+import de.interactive_instruments.etf.testdriver.AbstractTestTask;
+import de.interactive_instruments.etf.testdriver.ExecutableTestSuiteUnavailable;
+import de.interactive_instruments.etf.testdriver.TestResultCollector;
+import de.interactive_instruments.exceptions.*;
+import de.interactive_instruments.exceptions.config.ConfigurationException;
 
 /**
  * TEAM Engine test run task for executing test remotly on the OGC TEAM Engine.
@@ -219,8 +221,9 @@ class TeTestTask extends AbstractTestTask {
 						ELEMENT_NODE, "test-method")) {
 
 					final int status = mapStatus(testStep);
-					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "started-at", "false"));
-					if (!configStep || status != 0) {
+					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "is-config", "false"));
+					// Only show normal test steps or failed "configure test steps"
+					if (!configStep || status == 1) {
 
 						final long testStepStartTimestamp = getStartTimestamp(testStep);
 						final String testStepId = getItemID(testStep);

@@ -15,9 +15,7 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
-import static de.interactive_instruments.etf.testdriver.te.Types.TE_SUPPORTED_TEST_OBJECT_TYPES;
-import static de.interactive_instruments.etf.testdriver.te.Types.TE_TEAM_ENGINE_TAG;
-import static de.interactive_instruments.etf.testdriver.te.Types.TE_TEST_ITEM_TYPES;
+import static de.interactive_instruments.etf.testdriver.te.Types.*;
 import static org.w3c.dom.Node.ELEMENT_NODE;
 
 import java.io.IOException;
@@ -26,7 +24,6 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
 
-import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -80,10 +77,12 @@ class TeTypeLoader implements EtsTypeLoader {
 	private final Logger logger = LoggerFactory.getLogger(TeTypeLoader.class);
 	private final Dao<ExecutableTestSuiteDto> etsDao;
 	private final DataStorage dataStorageCallback;
-	private final static String NOTE = "<br/><br/> This Executable Test Suite is executed by ETF on a remote OGC TEAM Engine instance. "
-			+ "The results are transformed into the ETF internal report format. "
-			+ " Some additional information may not exist in the TEAM Engine report "
-			+ "format and can not be mapped to the ETF report format.";
+	private final static String NOTE = "<br/><br/> This Executable Test Suite is executed using a remote TEAM Engine instance hosted by OGC for "
+			+ "their Compliance Program (CITE). The results are transformed into the ETF internal report format. Some information that is "
+			+ "typically included in ETF test results is not included in the TEAM Engine reports and cannot be included in this test report."
+			+ "<br/><br/>"
+			+ "Please report any issues or problems with the OGC CITE tests in the "
+			+ "<a target=\"_blank\" href=\"https://cite.opengeospatial.org/forum\">OGC Compliance Forum</a>.";
 
 	public static final TranslationTemplateBundleDto TE_TRANSLATION_TEMPLATE_BUNDLE = createTranslationTemplateBundle();
 	private boolean initialized = false;
@@ -362,6 +361,7 @@ class TeTypeLoader implements EtsTypeLoader {
 					testStepDto.setStatementForExecution("NOT_APPLICABLE");
 
 					// Pseudo Assertion
+					/*
 					final EID assertionId = getAssertionID(testStep, etsSpecificPrefix);
 					final TestAssertionDto assertionDto = new TestAssertionDto();
 					assertionDto.setId(assertionId);
@@ -371,8 +371,8 @@ class TeTypeLoader implements EtsTypeLoader {
 					assertionDto.setType(testNgAsseriton);
 					assertionDto.setExpectedResult("NOT_APPLICABLE");
 					assertionDto.setExpression("NOT_APPLICABLE");
-
 					testStepDto.addTestAssertion(assertionDto);
+					*/
 					testCaseDto.addTestStep(testStepDto);
 				}
 				testModuleDto.addTestCase(testCaseDto);

@@ -33,7 +33,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -42,6 +41,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import de.interactive_instruments.*;
+import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;
@@ -248,19 +248,20 @@ class TeTestTask extends AbstractTestTask {
 								final String type = XmlUtils.getAttribute(attachment, "name");
 								switch (type) {
 								case "response":
+									final String response = XmlUtils.nodeValue(attachment);
 									resultCollector.saveAttachment(IOUtils.toInputStream(
-											XmlUtils.nodeValue(attachment), "UTF-8"), "Service Response", null,
+											response, "UTF-8"), "Service Response", XmlUtils.isXml(response) ? "text/xml" : null,
 											"ServiceResponse");
 									break;
 								case "request":
 									final String request = XmlUtils.nodeValue(attachment);
 									if (XmlUtils.isXml(request)) {
 										resultCollector.saveAttachment(IOUtils.toInputStream(
-												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", null,
+												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", "text/xml",
 												"PostData");
 									} else {
 										resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter",
-												null,
+												"text/plain",
 												"GetParameter");
 									}
 									break;
@@ -270,12 +271,12 @@ class TeTestTask extends AbstractTestTask {
 							}
 						}
 						resultCollector.end(testStepId, status, testStepEndTimestamp);
-						testStepResultCollected=true;
-					}else{
+						testStepResultCollected = true;
+					} else {
 						lastConfigStatus = TestResultStatus.aggregateStatus(
 								TestResultStatus.valueOf(lastConfigStatus), TestResultStatus.valueOf(status)).ordinal();
 					}
-					if(testCaseEndTimeStamp < testStepEndTimestamp) {
+					if (testCaseEndTimeStamp < testStepEndTimestamp) {
 						testCaseEndTimeStamp = testStepEndTimestamp;
 					}
 				}
@@ -335,7 +336,17 @@ class TeTestTask extends AbstractTestTask {
 		final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
 		if (exception != null) {
 			final Node message = XmlUtils.getFirstChildNodeOfType(exception, ELEMENT_NODE, "message");
-			return XmlUtils.nodeValue(message);
+			if(message!=null) {
+				final String msg = XmlUtils.nodeValue(message);
+				if(!SUtils.isNullOrEmpty(msg)) {
+					return msg;
+				}
+			}else{
+				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
+				if(!SUtils.isNullOrEmpty(exceptionClass)) {
+					return "No message provided. Exception class "+exceptionClass;
+				}
+			}
 		}
 		return null;
 	}

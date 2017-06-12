@@ -33,6 +33,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -214,21 +215,23 @@ class TeTestTask extends AbstractTestTask {
 				} else {
 					resultCollector.startTestCase(testCaseId);
 				}
-				Node lastTestStep = null;
+				int lastConfigStatus = TestResultStatus.UNDEFINED.value();
+				long testCaseEndTimeStamp = 0;
+				boolean testStepResultCollected = false;
 
 				// Test Steps (no Test Assertions are used)
 				for (Node testStep = firstTestStep; testStep != null; testStep = XmlUtils.getNextSiblingOfType(testStep,
 						ELEMENT_NODE, "test-method")) {
 
 					final int status = mapStatus(testStep);
+					final long testStepEndTimestamp = getEndTimestamp(testStep);
 					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "is-config", "false"));
+
 					// Only show normal test steps or failed "configure test steps"
 					if (!configStep || status == 1) {
-
 						final long testStepStartTimestamp = getStartTimestamp(testStep);
 						final String testStepId = getItemID(testStep);
 						resultCollector.startTestStep(testStepId, testStepStartTimestamp);
-						final long testStepEndTimestamp = getEndTimestamp(testStep);
 
 						final String message = getMessage(testStep);
 						if (!SUtils.isNullOrEmpty(message)) {
@@ -254,7 +257,7 @@ class TeTestTask extends AbstractTestTask {
 									if (XmlUtils.isXml(request)) {
 										resultCollector.saveAttachment(IOUtils.toInputStream(
 												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", null,
-												"PostParameter");
+												"PostData");
 									} else {
 										resultCollector.saveAttachment(XmlUtils.nodeValue(attachment), "Request Parameter",
 												null,
@@ -267,14 +270,20 @@ class TeTestTask extends AbstractTestTask {
 							}
 						}
 						resultCollector.end(testStepId, status, testStepEndTimestamp);
-						lastTestStep = testStep;
+						testStepResultCollected=true;
+					}else{
+						lastConfigStatus = TestResultStatus.aggregateStatus(
+								TestResultStatus.valueOf(lastConfigStatus), TestResultStatus.valueOf(status)).ordinal();
+					}
+					if(testCaseEndTimeStamp < testStepEndTimestamp) {
+						testCaseEndTimeStamp = testStepEndTimestamp;
 					}
 				}
-				if (lastTestStep != null) {
-					// Get end timestamp from last test step
-					resultCollector.end(testCaseId, getEndTimestamp(lastTestStep));
+				if (testStepResultCollected) {
+					resultCollector.end(testCaseId, testCaseEndTimeStamp);
 				} else {
-					resultCollector.end(testCaseId);
+					// only config steps collected
+					resultCollector.end(testCaseId, lastConfigStatus, testCaseEndTimeStamp);
 				}
 			}
 			resultCollector.end(testModuleId, getEndTimestamp(testModule));

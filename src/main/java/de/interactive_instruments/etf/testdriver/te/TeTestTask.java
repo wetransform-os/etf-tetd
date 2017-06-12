@@ -250,7 +250,8 @@ class TeTestTask extends AbstractTestTask {
 								case "response":
 									final String response = XmlUtils.nodeValue(attachment);
 									resultCollector.saveAttachment(IOUtils.toInputStream(
-											response, "UTF-8"), "Service Response", XmlUtils.isXml(response) ? "text/xml" : null,
+											response, "UTF-8"), "Service Response",
+											XmlUtils.isXml(response) ? "text/xml" : null,
 											"ServiceResponse");
 									break;
 								case "request":
@@ -336,15 +337,15 @@ class TeTestTask extends AbstractTestTask {
 		final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
 		if (exception != null) {
 			final Node message = XmlUtils.getFirstChildNodeOfType(exception, ELEMENT_NODE, "message");
-			if(message!=null) {
+			if (message != null) {
 				final String msg = XmlUtils.nodeValue(message);
-				if(!SUtils.isNullOrEmpty(msg)) {
+				if (!SUtils.isNullOrEmpty(msg)) {
 					return msg;
 				}
-			}else{
+			} else {
 				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
-				if(!SUtils.isNullOrEmpty(exceptionClass)) {
-					return "No message provided. Exception class "+exceptionClass;
+				if (!SUtils.isNullOrEmpty(exceptionClass)) {
+					return "No message provided. Exception class " + exceptionClass;
 				}
 			}
 		}

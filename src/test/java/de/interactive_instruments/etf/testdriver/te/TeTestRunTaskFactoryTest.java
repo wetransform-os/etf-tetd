@@ -16,6 +16,7 @@
 package de.interactive_instruments.etf.testdriver.te;
 
 import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.FAILED;
+import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.INTERNAL_ERROR;
 import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.UNDEFINED;
 import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TEST_DRIVER_EID;
 import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TIMEOUT_SEC;
@@ -241,7 +242,7 @@ public class TeTestRunTaskFactoryTest {
 		final TestRunDto runResult = taskPoolRegistry.getTaskById(testRunDto.getId()).waitForResult();
 		assertNotNull(runResult);
 		final TestTaskResultDto result = runResult.getTestTasks().get(0).getTestTaskResult();
-		assertEquals(UNDEFINED, result.getResultStatus());
+		assertEquals(INTERNAL_ERROR, result.getResultStatus());
 		assertFalse(SUtils.isNullOrEmpty(result.getErrorMessage()));
 		assertTrue(result.getErrorMessage().contains("OGC TEAM Engine returned HTTP status code"));
 		assertEquals(2, result.getAttachments().size());
@@ -271,7 +272,7 @@ public class TeTestRunTaskFactoryTest {
 		final TestRunDto runResult = taskPoolRegistry.getTaskById(testRunDto.getId()).waitForResult();
 		assertNotNull(runResult);
 		final TestTaskResultDto result = runResult.getTestTasks().get(0).getTestTaskResult();
-		assertEquals(UNDEFINED, result.getResultStatus());
+		assertEquals(INTERNAL_ERROR, result.getResultStatus());
 		assertFalse(SUtils.isNullOrEmpty(result.getErrorMessage()));
 		assertTrue(
 				result.getErrorMessage().contains("OGC TEAM Engine is taking too long to respond. Timeout after " + timeout));

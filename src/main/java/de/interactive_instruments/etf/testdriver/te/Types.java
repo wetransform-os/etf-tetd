@@ -73,7 +73,7 @@ class Types {
 		tag.setId(EidFactory.getDefault().createUUID("268af871-5cf0-443e-834a-ce40bed6c0e3"));
 		tag.setPriority(1000);
 		tag.setLabel("OGC Test Suites (remote execution)");
-		tag.setDescription("Executable Test Suites that can executed on a remote OGC TEAM Engine instance");
+		tag.setDescription("Executable Test Suites that are executed on a remote OGC TEAM Engine instance");
 		return tag;
 	}
 }

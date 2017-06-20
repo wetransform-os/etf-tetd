@@ -232,7 +232,8 @@ class TeTestTask extends AbstractTestTask {
 					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "is-config", "false"));
 
 					// output only failed steps or only one skipped or not applicable config test step
-					if (!configStep || status == 1 || (!oneSkippedOrNotApplicableConfigStepRecorded && status == 2 || status == 3)) {
+					if (!configStep || status == 1
+							|| (!oneSkippedOrNotApplicableConfigStepRecorded && status == 2 || status == 3)) {
 						final long testStepStartTimestamp = getStartTimestamp(testStep);
 						final String testStepId = getItemID(testStep);
 						resultCollector.startTestStep(testStepId, testStepStartTimestamp);
@@ -276,8 +277,8 @@ class TeTestTask extends AbstractTestTask {
 							}
 						}
 						resultCollector.end(testStepId, status, testStepEndTimestamp);
-						if(configStep && (status==2 || status==3)) {
-							oneSkippedOrNotApplicableConfigStepRecorded=true;
+						if (configStep && (status == 2 || status == 3)) {
+							oneSkippedOrNotApplicableConfigStepRecorded = true;
 						}
 						testStepResultCollected = true;
 					}
@@ -330,7 +331,7 @@ class TeTestTask extends AbstractTestTask {
 			if ("true".equals(XmlUtils.getAttributeOrDefault(node, "is-config", "false"))) {
 				final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
 				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
-				if (exceptionClass!=null && exceptionClass.equalsIgnoreCase("java.lang.AssertionError")) {
+				if (exceptionClass != null && exceptionClass.equalsIgnoreCase("java.lang.AssertionError")) {
 					// NOT APPLICABLE
 					return 3;
 				}
@@ -342,7 +343,7 @@ class TeTestTask extends AbstractTestTask {
 			final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
 			if (exception != null) {
 				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
-				if (exceptionClass!=null && !exceptionClass.equalsIgnoreCase("org.testng.SkipException")) {
+				if (exceptionClass != null && !exceptionClass.equalsIgnoreCase("org.testng.SkipException")) {
 					// SKIPPED
 					return 2;
 				}

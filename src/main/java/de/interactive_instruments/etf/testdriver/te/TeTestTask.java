@@ -215,20 +215,24 @@ class TeTestTask extends AbstractTestTask {
 				} else {
 					resultCollector.startTestCase(testCaseId);
 				}
-				int lastConfigStatus = TestResultStatus.UNDEFINED.value();
 				long testCaseEndTimeStamp = 0;
 				boolean testStepResultCollected = false;
+				boolean oneSkippedOrNotApplicableConfigStepRecorded = false;
 
 				// Test Steps (no Test Assertions are used)
 				for (Node testStep = firstTestStep; testStep != null; testStep = XmlUtils.getNextSiblingOfType(testStep,
 						ELEMENT_NODE, "test-method")) {
 
-					final int status = mapStatus(testStep);
 					final long testStepEndTimestamp = getEndTimestamp(testStep);
+					if (testCaseEndTimeStamp < testStepEndTimestamp) {
+						testCaseEndTimeStamp = testStepEndTimestamp;
+					}
+
+					final int status = mapStatus(testStep);
 					final boolean configStep = "true".equals(XmlUtils.getAttributeOrDefault(testStep, "is-config", "false"));
 
-					// Only show normal test steps or failed "configure test steps"
-					if (!configStep || status == 1) {
+					// output only failed steps or only one skipped or not applicable config test step
+					if (!configStep || status == 1 || (!oneSkippedOrNotApplicableConfigStepRecorded && status == 2 || status == 3)) {
 						final long testStepStartTimestamp = getStartTimestamp(testStep);
 						final String testStepId = getItemID(testStep);
 						resultCollector.startTestStep(testStepId, testStepStartTimestamp);
@@ -272,20 +276,17 @@ class TeTestTask extends AbstractTestTask {
 							}
 						}
 						resultCollector.end(testStepId, status, testStepEndTimestamp);
+						if(configStep && (status==2 || status==3)) {
+							oneSkippedOrNotApplicableConfigStepRecorded=true;
+						}
 						testStepResultCollected = true;
-					} else {
-						lastConfigStatus = TestResultStatus.aggregateStatus(
-								TestResultStatus.valueOf(lastConfigStatus), TestResultStatus.valueOf(status)).ordinal();
-					}
-					if (testCaseEndTimeStamp < testStepEndTimestamp) {
-						testCaseEndTimeStamp = testStepEndTimestamp;
 					}
 				}
 				if (testStepResultCollected) {
 					resultCollector.end(testCaseId, testCaseEndTimeStamp);
 				} else {
-					// only config steps collected
-					resultCollector.end(testCaseId, lastConfigStatus, testCaseEndTimeStamp);
+					// only passed config steps collected,
+					resultCollector.end(testCaseId, 0, testCaseEndTimeStamp);
 				}
 			}
 			resultCollector.end(testModuleId, getEndTimestamp(testModule));
@@ -325,9 +326,29 @@ class TeTestTask extends AbstractTestTask {
 		case "PASS":
 			return 0;
 		case "FAIL":
+			// if the failed test is a config step which has an AssertionError exception, it is just NOT APPLICABLE
+			if ("true".equals(XmlUtils.getAttributeOrDefault(node, "is-config", "false"))) {
+				final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
+				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
+				if (exceptionClass!=null && exceptionClass.equalsIgnoreCase("java.lang.AssertionError")) {
+					// NOT APPLICABLE
+					return 3;
+				}
+			}
+			// FAILED
 			return 1;
 		case "SKIP":
-			return 2;
+			// if the skipped test has a SkipException, it is just NOT APPLICABLE
+			final Node exception = XmlUtils.getFirstChildNodeOfType(node, ELEMENT_NODE, "exception");
+			if (exception != null) {
+				final String exceptionClass = XmlUtils.getAttribute(exception, "class");
+				if (exceptionClass!=null && !exceptionClass.equalsIgnoreCase("org.testng.SkipException")) {
+					// SKIPPED
+					return 2;
+				}
+			}
+			// NOT APPLICABLE
+			return 3;
 		}
 		// UNDEFINED
 		return 6;

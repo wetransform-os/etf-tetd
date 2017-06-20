@@ -95,12 +95,14 @@ jar {
 	}
 }
 
-task deployTestDriver(dependsOn: jar) << {
-	copy {
-		from jar
-		into "$deploymentDir"
+task deployTestDriver(dependsOn: jar) {
+	doLast {
+		copy {
+			from jar
+			into "$deploymentDir"
+		}
+		println "Copied test driver to $deploymentDir"
 	}
-	println "Copied test driver to $deploymentDir"
 }
 
 install {
@@ -111,13 +113,15 @@ install {
 ///////////////////////////////////////////////////////////////////////////////////////
 
 
-task deployTestDriverForIntegrationTesting(dependsOn: jar) << {
+task deployTestDriverForIntegrationTesting(dependsOn: jar) {
 	group 'verification'
-	copy {
-		from jar
-		into "$testDeploymentDir"
+	doLast {
+		copy {
+			from jar
+			into "$testDeploymentDir"
+		}
+		println "Copied test driver to $testDeploymentDir"
 	}
-	println "Copied test driver to $testDeploymentDir"
 }
 
 // Drop classloader for integration tests

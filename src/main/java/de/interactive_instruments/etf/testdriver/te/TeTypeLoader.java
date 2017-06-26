@@ -296,7 +296,7 @@ class TeTypeLoader implements EtsTypeLoader {
 							: "No description provided by OGC TEAM Engine";
 					ets.setDescription(description + NOTE);
 					ets.addTag(TE_TEAM_ENGINE_TAG);
-					ets.setItemHash(SUtils.calcHash(description).getBytes());
+					ets.setItemHash(SUtils.fastCalcHashAsHexStr(description));
 					ets.setLastEditor("Open Geospatial Consortium");
 					ets.setLastUpdateDateNow();
 					ets.setTranslationTemplateBundle(TE_TRANSLATION_TEMPLATE_BUNDLE);

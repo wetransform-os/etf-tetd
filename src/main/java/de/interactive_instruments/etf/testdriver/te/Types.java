@@ -33,10 +33,6 @@ class Types {
 	// Supported Test Object Types
 	public static final EidMap<TestObjectTypeDto> TE_SUPPORTED_TEST_OBJECT_TYPES = TestObjectTypeDetectorManager
 			.getTypes(
-					// SIMPLE_WEB_SERVICE_TOT
-					// "88311f83-818c-46ed-8a9a-cec4f3707365",
-					// INSPIRE_DOWNLOAD_DIRECT_TOT
-					// "dd83316d-7c30-49ad-8cc9-e5b73e501faa",
 					// WFS_2_0_TOT
 					"9b6ef734-981e-4d60-aa81-d6730a1c6389");
 

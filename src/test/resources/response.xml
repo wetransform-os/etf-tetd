@@ -82,15 +82,14 @@
 
             <!-- Test Case -->
             <class name="org.opengis.cite.iso19136.general.ModelAndSyntaxTests">
-                <!-- Test Step -->
 
-                <!-- Assertion -->
+                <!-- Test Step -->
                 <test-method status="PASS" signature="verifyGMLObjectPropertyPattern()[pri:0, instance:org.opengis.cite.iso19136.general.ModelAndSyntaxTests@8f6b6c6]" name="verifyGMLObjectPropertyPattern" duration-ms="1" started-at="2017-05-09T06:43:19Z" description="See ISO 19136: 7.1.3, A.1.1.7" finished-at="2017-05-09T06:43:19Z">
                     <reporter-output>
                     </reporter-output>
                 </test-method> <!-- verifyGMLObjectPropertyPattern -->
 
-                <!-- Assertion -->
+                <!-- Test Step -->
                 <test-method status="PASS" signature="initSchemaModelFixture(org.testng.ITestContext)[pri:0, instance:org.opengis.cite.iso19136.general.ModelAndSyntaxTests@8f6b6c6]" name="initSchemaModelFixture" is-config="true" duration-ms="0" started-at="2017-05-09T06:43:19Z" finished-at="2017-05-09T06:43:19Z">
                     <params>
                         <param index="0">

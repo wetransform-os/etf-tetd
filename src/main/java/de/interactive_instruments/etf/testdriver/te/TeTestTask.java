@@ -256,12 +256,12 @@ class TeTestTask extends AbstractTestTask {
 									final String response = XmlUtils.nodeValue(attachment);
 									resultCollector.saveAttachment(IOUtils.toInputStream(
 											response, "UTF-8"), "Service Response",
-											XmlUtils.isXml(response) ? "text/xml" : null,
+											XmlUtils.isWellFormed(response) ? "text/xml" : null,
 											"ServiceResponse");
 									break;
 								case "request":
 									final String request = XmlUtils.nodeValue(attachment);
-									if (XmlUtils.isXml(request)) {
+									if (XmlUtils.isWellFormed(request)) {
 										resultCollector.saveAttachment(IOUtils.toInputStream(
 												XmlUtils.nodeValue(attachment), "UTF-8"), "Request Parameter", "text/xml",
 												"PostData");

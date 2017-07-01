@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import de.interactive_instruments.XmlUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -106,7 +107,7 @@ public class TeTestRunTaskFactoryTest {
 		testObjectDto.setCreationDate(new Date(0));
 		testObjectDto.setAuthor("ii");
 		testObjectDto.setRemoteResource(URI.create("http://none"));
-		testObjectDto.setItemHash(new byte[]{'0'});
+		testObjectDto.setItemHash("");
 		testObjectDto.setLocalPath("/none");
 
 		((WriteDao) DATA_STORAGE.getDao(TestObjectDto.class)).deleteAllExisting(Collections.singleton(testObjectDto.getId()));
@@ -189,7 +190,7 @@ public class TeTestRunTaskFactoryTest {
 		final ExecutableTestSuiteDto ets = etsDao().getById(wfs20EtsId).getDto();
 		assertEquals(LABEL, ets.getLabel());
 		assertEquals(VERSION + ".0", ets.getVersionAsStr());
-		assertEquals(0, ets.getAssertionsSize());
+		assertEquals(0, ets.getLowestLevelItemSize());
 	}
 
 	@Test
@@ -197,7 +198,7 @@ public class TeTestRunTaskFactoryTest {
 		final URL url = Thread.currentThread().getContextClassLoader().getResource("response.xml");
 		final File file = new File(url.getPath());
 
-		final DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
+		final DocumentBuilderFactory domFactory = XmlUtils.newDocumentBuilderFactoryInstance();
 		domFactory.setNamespaceAware(true);
 		final DocumentBuilder builder = domFactory.newDocumentBuilder();
 		final Document result = builder.parse(file);

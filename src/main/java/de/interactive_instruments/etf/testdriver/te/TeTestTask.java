@@ -79,7 +79,7 @@ class TeTestTask extends AbstractTestTask {
 
 	@Override
 	protected void doRun() throws Exception {
-		final DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
+		final DocumentBuilderFactory domFactory = XmlUtils.newDocumentBuilderFactoryInstance();
 		domFactory.setNamespaceAware(true);
 		final DocumentBuilder builder = domFactory.newDocumentBuilder();
 

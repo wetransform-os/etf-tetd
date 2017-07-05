@@ -195,7 +195,7 @@ class TeTestTask extends AbstractTestTask {
 		final Result outputTarget = new StreamResult(outputStream);
 		TransformerFactory.newInstance().newTransformer().transform(xmlSource, outputTarget);
 		final InputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
-		resultCollector.saveAttachment(inputStream, "TEAM Engine result", "text/xml", "JunitXml");
+		resultCollector.saveAttachment(inputStream, "TEAM Engine result", "text/xml", "TestNgResultXml");
 
 		// Test Modules
 		for (Node testModule = XmlUtils.getFirstChildNodeOfType(suiteResult, ELEMENT_NODE,

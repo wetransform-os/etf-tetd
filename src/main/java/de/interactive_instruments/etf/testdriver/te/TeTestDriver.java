@@ -22,15 +22,12 @@ import static de.interactive_instruments.etf.testdriver.te.Types.TE_SUPPORTED_TE
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import de.interactive_instruments.CLUtils;
 import de.interactive_instruments.Credentials;
 import de.interactive_instruments.SUtils;
-import de.interactive_instruments.etf.EtfConstants;
 import de.interactive_instruments.etf.component.ComponentInfo;
 import de.interactive_instruments.etf.dal.dao.DataStorage;
 import de.interactive_instruments.etf.dal.dao.DataStorageRegistry;
@@ -40,15 +37,16 @@ import de.interactive_instruments.etf.dal.dto.capabilities.ComponentDto;
 import de.interactive_instruments.etf.dal.dto.capabilities.TestObjectTypeDto;
 import de.interactive_instruments.etf.dal.dto.result.TestTaskResultDto;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
-import de.interactive_instruments.etf.dal.dto.test.ExecutableTestSuiteDto;
 import de.interactive_instruments.etf.model.EID;
 import de.interactive_instruments.etf.model.EidFactory;
-import de.interactive_instruments.etf.testdriver.*;
+import de.interactive_instruments.etf.testdriver.AbstractTestDriver;
+import de.interactive_instruments.etf.testdriver.ComponentInitializer;
+import de.interactive_instruments.etf.testdriver.TestTask;
+import de.interactive_instruments.etf.testdriver.TestTaskInitializationException;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
 import de.interactive_instruments.exceptions.config.InvalidPropertyException;
 import de.interactive_instruments.properties.ConfigProperties;
-import de.interactive_instruments.properties.ConfigPropertyHolder;
 
 /**
  * TEAM-Engine test driver component

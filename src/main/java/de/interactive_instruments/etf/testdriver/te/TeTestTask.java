@@ -41,7 +41,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import de.interactive_instruments.*;
-import de.interactive_instruments.etf.dal.dto.result.TestResultStatus;
 import de.interactive_instruments.etf.dal.dto.run.TestTaskDto;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.testdriver.AbstractTestTask;

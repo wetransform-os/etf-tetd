@@ -15,12 +15,10 @@
  */
 package de.interactive_instruments.etf.testdriver.te;
 
-import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.FAILED;
 import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.INTERNAL_ERROR;
-import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.UNDEFINED;
+import static de.interactive_instruments.etf.test.DataStorageTestUtils.DATA_STORAGE;
 import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TEST_DRIVER_EID;
 import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TIMEOUT_SEC;
-import static de.interactive_instruments.etf.testdriver.te.TeTestUtils.DATA_STORAGE;
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -31,13 +29,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Date;
-import java.util.concurrent.ExecutionException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import de.interactive_instruments.XmlUtils;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -47,10 +42,9 @@ import org.w3c.dom.Document;
 
 import de.interactive_instruments.IFile;
 import de.interactive_instruments.SUtils;
-import de.interactive_instruments.UriUtils;
+import de.interactive_instruments.XmlUtils;
 import de.interactive_instruments.etf.EtfConstants;
 import de.interactive_instruments.etf.component.ComponentNotLoadedException;
-import de.interactive_instruments.etf.dal.dao.Dao;
 import de.interactive_instruments.etf.dal.dao.WriteDao;
 import de.interactive_instruments.etf.dal.dao.basex.BsxDataStorage;
 import de.interactive_instruments.etf.dal.dto.capabilities.ResourceDto;
@@ -64,6 +58,7 @@ import de.interactive_instruments.etf.detector.TestObjectTypeDetectorManager;
 import de.interactive_instruments.etf.model.EID;
 import de.interactive_instruments.etf.model.EidFactory;
 import de.interactive_instruments.etf.model.EidMap;
+import de.interactive_instruments.etf.test.DataStorageTestUtils;
 import de.interactive_instruments.etf.testdriver.*;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
@@ -87,7 +82,7 @@ public class TeTestRunTaskFactoryTest {
 			"http://cite.opengeospatial.org/teamengine/rest/suites/wfs20/");
 
 	private static WriteDao<ExecutableTestSuiteDto> etsDao() {
-		return ((WriteDao) DATA_STORAGE.getDao(ExecutableTestSuiteDto.class));
+		return ((WriteDao) DataStorageTestUtils.DATA_STORAGE.getDao(ExecutableTestSuiteDto.class));
 	}
 
 	private TestRunDto createTestRunDtoForProject(final String url)
@@ -145,7 +140,7 @@ public class TeTestRunTaskFactoryTest {
 		// Init logger
 		LoggerFactory.getLogger(TeTestRunTaskFactoryTest.class).info("Started");
 
-		TeTestUtils.ensureInitialization();
+		DataStorageTestUtils.ensureInitialization();
 		if (testDriverManager == null) {
 
 			// Delete old ETS
@@ -155,12 +150,9 @@ public class TeTestRunTaskFactoryTest {
 				ExcUtils.suppress(e);
 			}
 
-			final EidMap<TestObjectTypeDto> supportedTypes = TestObjectTypeDetectorManager.getSupportedTypes();
-			((WriteDao) DATA_STORAGE.getDao(TestObjectTypeDto.class)).deleteAllExisting(supportedTypes.keySet());
-			((WriteDao) DATA_STORAGE.getDao(TestObjectTypeDto.class)).addAll(supportedTypes.values());
-
 			final IFile tdDir = new IFile(PropertyUtils.getenvOrProperty(
 					"ETF_TD_DEPLOYMENT_DIR", "./build/tmp/td"));
+			tdDir.ensureDir();
 			tdDir.expectDirIsReadable();
 
 			// Load driver
@@ -196,6 +188,7 @@ public class TeTestRunTaskFactoryTest {
 	@Test
 	public void T2_parseTestNgResults() throws Exception, ComponentNotLoadedException {
 		final URL url = Thread.currentThread().getContextClassLoader().getResource("response.xml");
+		assertNotNull(url);
 		final File file = new File(url.getPath());
 
 		final DocumentBuilderFactory domFactory = XmlUtils.newDocumentBuilderFactoryInstance();

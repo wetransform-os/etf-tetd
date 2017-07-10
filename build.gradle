@@ -58,8 +58,9 @@ dependencies {
 
 	integrationTest group: 'ch.qos.logback', name: 'logback-classic', version: etf_logbackVersion
 	integrationTest group: 'junit', name: 'junit', version: etf_junitTestVersion
-	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-stdtot', version: '1.0.0' + project.snapshotSuffix
 	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-bsxds', version: '2.0.0' + project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-stdtot', version: '1.0.0' + project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf.test', name: 'etf-unittest', version: '1.0.0' + project.snapshotSuffix
 }
 
 configurations {

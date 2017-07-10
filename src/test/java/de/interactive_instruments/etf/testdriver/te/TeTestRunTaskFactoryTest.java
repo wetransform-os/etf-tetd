@@ -187,9 +187,8 @@ public class TeTestRunTaskFactoryTest {
 
 	@Test
 	public void T2_parseTestNgResults() throws Exception, ComponentNotLoadedException {
-		final URL url = Thread.currentThread().getContextClassLoader().getResource("response.xml");
-		assertNotNull(url);
-		final File file = new File(url.getPath());
+		// Depends on testClasses (Classloader is not the test class loader so getResource does not work here)
+		final File file = new File("build/resources/test/response.xml");
 
 		final DocumentBuilderFactory domFactory = XmlUtils.newDocumentBuilderFactoryInstance();
 		domFactory.setNamespaceAware(true);

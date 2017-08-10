@@ -95,11 +95,12 @@ class TeTestTask extends AbstractTestTask {
 			apiUri = new URI(apiUrl);
 		} catch (URISyntaxException syntaxException) {
 			// great, try again with an escaped URL. Maybe this is supported in future TE versions...
-			getLogger().error("Team Engine does not support full escaping of URLs. "
-					+ "The invocation of the following URL might fail with HTTP error code 404: {} .");
 			final String apiUriFallback = UriUtils.withQueryParameters(
 					testTaskDto.getExecutableTestSuite().getRemoteResource().toString() + "run",
 					Collections.singletonMap("wfs", endpoint));
+			getLogger().error("Team Engine does not support full escaping of URLs. "
+							+ "The invocation of the following URL might fail with HTTP error code 404: {} .",
+					apiUriFallback);
 			apiUri = new URI(apiUriFallback);
 		}
 

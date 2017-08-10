@@ -99,7 +99,7 @@ class TeTestTask extends AbstractTestTask {
 					testTaskDto.getExecutableTestSuite().getRemoteResource().toString() + "run",
 					Collections.singletonMap("wfs", endpoint));
 			getLogger().error("Team Engine does not support full escaping of URLs. "
-							+ "The invocation of the following URL might fail with HTTP error code 404: {} .",
+					+ "The invocation of the following URL might fail with HTTP error code 404: {} .",
 					apiUriFallback);
 			apiUri = new URI(apiUriFallback);
 		}

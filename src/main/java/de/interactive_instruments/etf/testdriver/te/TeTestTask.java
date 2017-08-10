@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -85,10 +86,23 @@ class TeTestTask extends AbstractTestTask {
 		final String endpoint = this.testTaskDto.getTestObject().getResourceByName(
 				"serviceEndpoint").toString();
 
-		final String apiUri = UriUtils.withQueryParameters(
-				testTaskDto.getExecutableTestSuite().getRemoteResource().toString() + "run",
-				Collections.singletonMap("wfs",
-						endpoint.replace("&", "%26")));
+		// TEAM engine can not escape characters other than '&' in the parameter values...
+		// Try to build an URI without escaping other characters.
+		URI apiUri;
+		try {
+			final String apiUrl = testTaskDto.getExecutableTestSuite().getRemoteResource().toString() +
+					"run?wfs=" + endpoint.replaceAll("&", "%26");
+			apiUri = new URI(apiUrl);
+		} catch (URISyntaxException syntaxException) {
+			// great, try again with an escaped URL. Maybe this is supported in future TE versions...
+			getLogger().error("Team Engine does not support full escaping of URLs. "
+					+ "The invocation of the following URL might fail with HTTP error code 404: {} .");
+			final String apiUriFallback = UriUtils.withQueryParameters(
+					testTaskDto.getExecutableTestSuite().getRemoteResource().toString() + "run",
+					Collections.singletonMap("wfs", endpoint));
+			apiUri = new URI(apiUriFallback);
+		}
+
 		getLogger().info("Invoking TEAM Engine remotely. This may take a while. "
 				+ "Progress messages are not supported.");
 		final String timeoutStr = TimeUtils.milisAsMinsSeconds(timeout);
@@ -97,7 +111,7 @@ class TeTestTask extends AbstractTestTask {
 
 		final Document result;
 		try {
-			result = builder.parse(UriUtils.openStream(new URI(apiUri), credentials, timeout));
+			result = builder.parse(UriUtils.openStream(apiUri, credentials, timeout));
 		} catch (UriUtils.ConnectionException e) {
 			getLogger().info("OGC TEAM Engine returned an error.");
 

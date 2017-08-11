@@ -77,6 +77,29 @@ class TeTestTask extends AbstractTestTask {
 				testTaskDto.getExecutableTestSuite().getLabel();
 	}
 
+
+	private String checkUrlEncoding(final String wfsUrl) {
+		try {
+			final String decoded=UriUtils.ensureUrlDecoded(wfsUrl);
+			final String hashDecoded = UriUtils.hashFromContent(
+					new URI(decoded));
+			final String hashEncoded = UriUtils.hashFromContent(
+					new URI(wfsUrl));
+			if(!hashDecoded.equals(hashEncoded)) {
+				final String errorMessage = " Please note: it seems that your server does not support "
+						+ "URL encoding correctly. The encoded URL '"+wfsUrl
+						+"' and the URL '"+decoded+"' return "
+						+ "different documents. "
+						+ "The OGC TEAM engine uses only the encoded URL.";
+				getLogger().error(errorMessage);
+				return errorMessage;
+			}
+		} catch (NullPointerException | URISyntaxException | IOException ign) {
+			ExcUtils.suppress(ign);
+		}
+		return "";
+	}
+
 	@Override
 	protected void doRun() throws Exception {
 		final DocumentBuilderFactory domFactory = XmlUtils.newDocumentBuilderFactoryInstance();
@@ -89,9 +112,11 @@ class TeTestTask extends AbstractTestTask {
 		// TEAM engine can not escape characters other than '&' in the parameter values...
 		// Try to build an URI without escaping other characters.
 		URI apiUri;
+		String wfsUrl;
 		try {
+			wfsUrl = endpoint.replaceAll("&", "%26");
 			final String apiUrl = testTaskDto.getExecutableTestSuite().getRemoteResource().toString() +
-					"run?wfs=" + endpoint.replaceAll("&", "%26");
+					"run?wfs=" + wfsUrl;
 			apiUri = new URI(apiUrl);
 		} catch (URISyntaxException syntaxException) {
 			// great, try again with an escaped URL. Maybe this is supported in future TE versions...
@@ -101,6 +126,7 @@ class TeTestTask extends AbstractTestTask {
 			getLogger().error("Team Engine does not support full escaping of URLs. "
 					+ "The invocation of the following URL might fail with HTTP error code 404: {} .",
 					apiUriFallback);
+			wfsUrl = endpoint;
 			apiUri = new URI(apiUriFallback);
 		}
 
@@ -139,7 +165,9 @@ class TeTestTask extends AbstractTestTask {
 				getLogger().error("Error message: {}", errorMessage);
 				reportError(
 						"OGC TEAM Engine returned HTTP status code: "
-								+ String.valueOf(e.getResponseMessage() + ". Message: " + errorMessage),
+								+ String.valueOf(e.getResponseMessage()
+								+ ". Message: " + errorMessage
+								+ "  "+checkUrlEncoding(wfsUrl)),
 						htmlErrorMessage.getBytes(),
 						"text/html");
 			} else {

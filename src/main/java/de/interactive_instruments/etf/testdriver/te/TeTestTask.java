@@ -77,18 +77,17 @@ class TeTestTask extends AbstractTestTask {
 				testTaskDto.getExecutableTestSuite().getLabel();
 	}
 
-
 	private String checkUrlEncoding(final String wfsUrl) {
 		try {
-			final String decoded=UriUtils.ensureUrlDecoded(wfsUrl);
+			final String decoded = UriUtils.ensureUrlDecoded(wfsUrl);
 			final String hashDecoded = UriUtils.hashFromContent(
 					new URI(decoded));
 			final String hashEncoded = UriUtils.hashFromContent(
 					new URI(wfsUrl));
-			if(!hashDecoded.equals(hashEncoded)) {
+			if (!hashDecoded.equals(hashEncoded)) {
 				final String errorMessage = " Please note: it seems that your server does not support "
-						+ "URL encoding correctly. The encoded URL '"+wfsUrl
-						+"' and the URL '"+decoded+"' return "
+						+ "URL encoding correctly. The encoded URL '" + wfsUrl
+						+ "' and the URL '" + decoded + "' return "
 						+ "different documents. "
 						+ "The OGC TEAM engine uses only the encoded URL.";
 				getLogger().error(errorMessage);
@@ -166,8 +165,8 @@ class TeTestTask extends AbstractTestTask {
 				reportError(
 						"OGC TEAM Engine returned HTTP status code: "
 								+ String.valueOf(e.getResponseMessage()
-								+ ". Message: " + errorMessage
-								+ "  "+checkUrlEncoding(wfsUrl)),
+										+ ". Message: " + errorMessage
+										+ "  " + checkUrlEncoding(wfsUrl)),
 						htmlErrorMessage.getBytes(),
 						"text/html");
 			} else {

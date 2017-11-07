@@ -186,6 +186,7 @@ public class TeTestRunTaskFactoryTest {
 		final ExecutableTestSuiteDto ets = etsDao().getById(wfs20EtsId).getDto();
 		assertEquals(LABEL, ets.getLabel());
 		assertEquals(VERSION + ".0", ets.getVersionAsStr());
+		// Clean non-initialized ETS
 		assertEquals(0, ets.getLowestLevelItemSize());
 	}
 

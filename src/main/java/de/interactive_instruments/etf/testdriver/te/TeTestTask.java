@@ -119,7 +119,8 @@ class TeTestTask extends AbstractTestTask {
 
 		final Document result;
 		try {
-			result = builder.parse(UriUtils.openStream(apiUri, credentials, timeout));
+			// application/xml = TestNG
+			result = builder.parse(UriUtils.openStream(apiUri, credentials, timeout, "application/xml"));
 		} catch (UriUtils.ConnectionException e) {
 			getLogger().info("OGC TEAM Engine returned an error.");
 

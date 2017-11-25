@@ -85,7 +85,7 @@ jar.doFirst {
 				'Test-Engine-Title': 'TEAM Engine',
 				'Implementation-Vendor-Id': 'org.opengis.cite',
 				'Test-Engine-Vendor': 'Open Geospatial Consortium',
-				'Test-Engine-Version': '4.10'
+				'Test-Engine-Version': '5.0'
 		)
 	}
 }

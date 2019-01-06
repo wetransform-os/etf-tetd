@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 European Union
+ * Copyright 2017-2019 European Union
  * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by
  * the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
@@ -18,6 +18,29 @@
  * through Action 1.17: A Reusable INSPIRE Reference Platform (ARE3NA).
  */
 package de.interactive_instruments.etf.testdriver.te;
+
+import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.INTERNAL_ERROR;
+import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TEST_DRIVER_EID;
+import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TIMEOUT_SEC;
+import static org.junit.Assert.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.Date;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
 import de.interactive_instruments.IFile;
 import de.interactive_instruments.SUtils;
@@ -41,27 +64,6 @@ import de.interactive_instruments.etf.testdriver.*;
 import de.interactive_instruments.exceptions.*;
 import de.interactive_instruments.exceptions.config.ConfigurationException;
 import de.interactive_instruments.properties.PropertyUtils;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.Date;
-
-import static de.interactive_instruments.etf.dal.dto.result.TestResultStatus.INTERNAL_ERROR;
-import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TEST_DRIVER_EID;
-import static de.interactive_instruments.etf.testdriver.te.TeTestDriver.TE_TIMEOUT_SEC;
-import static org.junit.Assert.*;
 
 /**
  *
@@ -244,7 +246,7 @@ public class TeTestRunTaskFactoryTest {
 		assertTrue(result.getErrorMessage().contains("OGC TEAM Engine returned HTTP status code"));
 		// Todo not working with inmemory resultcollector
 		// assertEquals(2, result.getAttachments().size());
-		assertTrue(result.getTestModuleResults()==null || result.getTestModuleResults().isEmpty());
+		assertTrue(result.getTestModuleResults() == null || result.getTestModuleResults().isEmpty());
 	}
 
 	// @Test(timeout = 90)
@@ -275,7 +277,7 @@ public class TeTestRunTaskFactoryTest {
 		assertTrue(
 				result.getErrorMessage().contains("OGC TEAM Engine is taking too long to respond. Timeout after " + timeout));
 		assertEquals(1, result.getAttachments().size());
-		assertTrue(result.getTestModuleResults()==null || result.getTestModuleResults().isEmpty());
+		assertTrue(result.getTestModuleResults() == null || result.getTestModuleResults().isEmpty());
 	}
 
 }

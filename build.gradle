@@ -7,14 +7,15 @@
 buildscript {
 	repositories {
 		maven {
-			url "http://services.interactive-instruments.de/etfdev-af/plugins-releases-local"
+			url "https://services.interactive-instruments.de/etfdev-af/plugins-releases-local"
 			credentials {
+				// Our repository requires authenticating
 				username 'ii-bda'
-				password '6ozhS683'
+				password 'AP7mb4WA6F1ckdZkaE8Qx8GSowt'
 			}}
 	}
 	dependencies {
-		classpath group: 'de.interactive_instruments.bda', name: 'etf-bda', version:'1.0.25'
+		classpath group: 'de.interactive_instruments.bda', name: 'etf-bda', version: '[1.0.29,1.0.99]'
 	}
 	dependencies {
 		ant.unjar src: configurations.classpath.files.find {it.path.contains('etf')}, dest: 'build/gradle'
@@ -48,9 +49,9 @@ configurations {
 }
 
 dependencies {
-	api group: 'de.interactive_instruments', name: 'ii-commons-util', version:'2.0.0'+project.snapshotSuffix
-	api group: 'de.interactive_instruments.etf', name: 'etf-core', version: '1.0.0' + project.snapshotSuffix
-	api group: 'de.interactive_instruments.etf', name: 'etf-spi', version: '1.0.0' + project.snapshotSuffix
+	compileOnly group: 'de.interactive_instruments', name: 'ii-commons-util', version:'3.0.0'+project.snapshotSuffix
+	compileOnly group: 'de.interactive_instruments.etf', name: 'etf-core', version:'1.1.0'+project.snapshotSuffix
+	compileOnly group: 'de.interactive_instruments.etf', name: 'etf-spi', version:'1.0.1'+project.snapshotSuffix
 	api group: 'org.slf4j', name: 'slf4j-api', version: etf_slf4jApiVersion
 
 	// https://mvnrepository.com/artifact/org.jsoup/jsoup
@@ -58,9 +59,9 @@ dependencies {
 
 	integrationTest group: 'ch.qos.logback', name: 'logback-classic', version: etf_logbackVersion
 	integrationTest group: 'junit', name: 'junit', version: etf_junitTestVersion
-	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-bsxds', version: '2.0.0' + project.snapshotSuffix
-	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-stdtot', version: '1.0.0' + project.snapshotSuffix
-	integrationTest group: 'de.interactive_instruments.etf.test', name: 'etf-unittest', version: '1.0.0' + project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-spi', version:'1.0.1'+project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf', name: 'etf-stdtot', version: '1.0.1' + project.snapshotSuffix
+	integrationTest group: 'de.interactive_instruments.etf.test', name: 'etf-unittest', version: '1.1.1' + project.snapshotSuffix
 }
 
 configurations {
@@ -85,7 +86,7 @@ jar.doFirst {
 				'Test-Engine-Title': 'TEAM Engine',
 				'Implementation-Vendor-Id': 'org.opengis.cite',
 				'Test-Engine-Vendor': 'Open Geospatial Consortium',
-				'Test-Engine-Version': '4.10'
+				'Test-Engine-Version': '5.0'
 		)
 	}
 }

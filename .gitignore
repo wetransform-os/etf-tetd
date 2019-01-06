@@ -4,3 +4,4 @@
 etf-tetd.iml
 build
 hs_err_pid*.log
+/build-dependencies.txt

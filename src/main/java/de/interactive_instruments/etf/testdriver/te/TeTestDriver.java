@@ -60,134 +60,134 @@ import de.interactive_instruments.properties.ConfigProperties;
 @ComponentInitializer(id = TE_TEST_DRIVER_EID)
 public class TeTestDriver extends AbstractTestDriver {
 
-	public static final String TE_TEST_DRIVER_EID = "07f42606-41b1-4871-a83b-64c20012f03b";
-	public static final String TE_REMOTE_URL = "etf.testdrivers.teamengine.url";
-	public static final String TE_REMOTE_USERNAME = "etf.testdrivers.teamengine.username";
-	public static final String TE_REMOTE_PASSWORD = "etf.testdrivers.teamengine.password";
-	// timeout in seconds
-	public static final String TE_TIMEOUT_SEC = "etf.testdrivers.teamengine.timeout";
-	private DataStorage dataStorageCallback;
-	private URI apiUri;
-	private Credentials credentials;
-	private static final String supportedTeamEngineVersion = CLUtils.getManifestAttributeValue(TeTestDriver.class,
-			"Test-Engine-Version");
+    public static final String TE_TEST_DRIVER_EID = "07f42606-41b1-4871-a83b-64c20012f03b";
+    public static final String TE_REMOTE_URL = "etf.testdrivers.teamengine.url";
+    public static final String TE_REMOTE_USERNAME = "etf.testdrivers.teamengine.username";
+    public static final String TE_REMOTE_PASSWORD = "etf.testdrivers.teamengine.password";
+    // timeout in seconds
+    public static final String TE_TIMEOUT_SEC = "etf.testdrivers.teamengine.timeout";
+    private DataStorage dataStorageCallback;
+    private URI apiUri;
+    private Credentials credentials;
+    private static final String supportedTeamEngineVersion = CLUtils.getManifestAttributeValue(TeTestDriver.class,
+            "Test-Engine-Version");
 
-	final static ComponentInfo COMPONENT_INFO = new ComponentInfo() {
-		@Override
-		public String getName() {
-			return "TEAM Engine test driver";
-		}
+    final static ComponentInfo COMPONENT_INFO = new ComponentInfo() {
+        @Override
+        public String getName() {
+            return "TEAM Engine test driver";
+        }
 
-		@Override
-		public EID getId() {
-			return EidFactory.getDefault().createAndPreserveStr(TE_TEST_DRIVER_EID);
-		}
+        @Override
+        public EID getId() {
+            return EidFactory.getDefault().createAndPreserveStr(TE_TEST_DRIVER_EID);
+        }
 
-		@Override
-		public String getVersion() {
-			return this.getClass().getPackage().getImplementationVersion();
-		}
+        @Override
+        public String getVersion() {
+            return this.getClass().getPackage().getImplementationVersion();
+        }
 
-		@Override
-		public String getVendor() {
-			return this.getClass().getPackage().getImplementationVendor();
-		}
+        @Override
+        public String getVendor() {
+            return this.getClass().getPackage().getImplementationVendor();
+        }
 
-		@Override
-		public String getDescription() {
-			return "Test driver for TEAM Engine " + supportedTeamEngineVersion;
-		}
-	};
+        @Override
+        public String getDescription() {
+            return "Test driver for TEAM Engine " + supportedTeamEngineVersion;
+        }
+    };
 
-	public TeTestDriver() {
-		super(new ConfigProperties());
-	}
+    public TeTestDriver() {
+        super(new ConfigProperties());
+    }
 
-	@Override
-	public Collection<TestObjectTypeDto> getTestObjectTypes() {
-		return TE_SUPPORTED_TEST_OBJECT_TYPES.values();
-	}
+    @Override
+    public Collection<TestObjectTypeDto> getTestObjectTypes() {
+        return TE_SUPPORTED_TEST_OBJECT_TYPES.values();
+    }
 
-	@Override
-	final public ComponentInfo getInfo() {
-		return COMPONENT_INFO;
-	}
+    @Override
+    final public ComponentInfo getInfo() {
+        return COMPONENT_INFO;
+    }
 
-	@Override
-	public TestTask createTestTask(final TestTaskDto testTaskDto) throws TestTaskInitializationException {
-		try {
-			Objects.requireNonNull(testTaskDto, "Test Task not set").ensureBasicValidity();
+    @Override
+    public TestTask createTestTask(final TestTaskDto testTaskDto) throws TestTaskInitializationException {
+        try {
+            Objects.requireNonNull(testTaskDto, "Test Task not set").ensureBasicValidity();
 
-			// Get ETS
-			testTaskDto.getTestObject().ensureBasicValidity();
-			testTaskDto.getExecutableTestSuite().ensureBasicValidity();
-			final TestTaskResultDto testTaskResult = new TestTaskResultDto();
-			testTaskResult.setId(EidFactory.getDefault().createRandomId());
-			testTaskDto.setTestTaskResult(testTaskResult);
-			return new TeTestTask(
-					(int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 1200)),
-					credentials, (TeTypeLoader) typeLoader, testTaskDto);
-		} catch (IncompleteDtoException e) {
-			throw new TestTaskInitializationException(e);
-		} catch (InvalidPropertyException e) {
-			throw new TestTaskInitializationException(e);
-		}
+            // Get ETS
+            testTaskDto.getTestObject().ensureBasicValidity();
+            testTaskDto.getExecutableTestSuite().ensureBasicValidity();
+            final TestTaskResultDto testTaskResult = new TestTaskResultDto();
+            testTaskResult.setId(EidFactory.getDefault().createRandomId());
+            testTaskDto.setTestTaskResult(testTaskResult);
+            return new TeTestTask(
+                    (int) TimeUnit.SECONDS.toMillis(configProperties.getPropertyOrDefaultAsInt(TE_TIMEOUT_SEC, 1200)),
+                    credentials, (TeTypeLoader) typeLoader, testTaskDto);
+        } catch (IncompleteDtoException e) {
+            throw new TestTaskInitializationException(e);
+        } catch (InvalidPropertyException e) {
+            throw new TestTaskInitializationException(e);
+        }
 
-	}
+    }
 
-	@Override
-	final public void doInit()
-			throws ConfigurationException, IllegalStateException, InitializationException, InvalidStateTransitionException {
-		dataStorageCallback = DataStorageRegistry.instance().get(configProperties.getProperty(ETF_DATA_STORAGE_NAME));
-		if (dataStorageCallback == null) {
-			throw new InvalidStateTransitionException("Data Storage not set");
-		}
+    @Override
+    final public void doInit()
+            throws ConfigurationException, IllegalStateException, InitializationException, InvalidStateTransitionException {
+        dataStorageCallback = DataStorageRegistry.instance().get(configProperties.getProperty(ETF_DATA_STORAGE_NAME));
+        if (dataStorageCallback == null) {
+            throw new InvalidStateTransitionException("Data Storage not set");
+        }
 
-		final String teUrl = configProperties.getPropertyOrDefault(TE_REMOTE_URL,
-				"http://cite.opengeospatial.org/teamengine");
-		if (SUtils.isNullOrEmpty(teUrl)) {
-			throw new ConfigurationException("Property " + TE_REMOTE_URL + " not set");
-		}
-		try {
-			if (teUrl.charAt(teUrl.length() - 1) == '/') {
-				apiUri = new URI(teUrl);
-			} else {
-				apiUri = new URI(teUrl + "/");
-			}
-		} catch (URISyntaxException e) {
-			throw new ConfigurationException("Property " + TE_REMOTE_URL + " must be an URL");
-		}
+        final String teUrl = configProperties.getPropertyOrDefault(TE_REMOTE_URL,
+                "http://cite.opengeospatial.org/teamengine");
+        if (SUtils.isNullOrEmpty(teUrl)) {
+            throw new ConfigurationException("Property " + TE_REMOTE_URL + " not set");
+        }
+        try {
+            if (teUrl.charAt(teUrl.length() - 1) == '/') {
+                apiUri = new URI(teUrl);
+            } else {
+                apiUri = new URI(teUrl + "/");
+            }
+        } catch (URISyntaxException e) {
+            throw new ConfigurationException("Property " + TE_REMOTE_URL + " must be an URL");
+        }
 
-		if (configProperties.hasProperty(TE_REMOTE_USERNAME) && configProperties.hasProperty(TE_REMOTE_PASSWORD)) {
-			credentials = new Credentials(configProperties.getProperty(TE_REMOTE_USERNAME),
-					configProperties.getProperty(TE_REMOTE_PASSWORD));
-		} else {
-			credentials = null;
-		}
+        if (configProperties.hasProperty(TE_REMOTE_USERNAME) && configProperties.hasProperty(TE_REMOTE_PASSWORD)) {
+            credentials = new Credentials(configProperties.getProperty(TE_REMOTE_USERNAME),
+                    configProperties.getProperty(TE_REMOTE_PASSWORD));
+        } else {
+            credentials = null;
+        }
 
-		propagateComponents();
+        propagateComponents();
 
-		typeLoader = new TeTypeLoader(dataStorageCallback, apiUri, credentials, this.getInfo());
-		typeLoader.getConfigurationProperties().setPropertiesFrom(configProperties, true);
-	}
+        typeLoader = new TeTypeLoader(dataStorageCallback, apiUri, credentials, this.getInfo());
+        typeLoader.getConfigurationProperties().setPropertiesFrom(configProperties, true);
+    }
 
-	@Override
-	protected void doRelease() {
+    @Override
+    protected void doRelease() {
 
-	}
+    }
 
-	private void propagateComponents() throws InitializationException {
-		// Propagate Component COMPONENT_INFO from here
-		final WriteDao<ComponentDto> componentDao = ((WriteDao<ComponentDto>) dataStorageCallback.getDao(ComponentDto.class));
-		try {
-			try {
-				componentDao.delete(this.getInfo().getId());
-			} catch (ObjectWithIdNotFoundException e) {
-				ExcUtils.suppress(e);
-			}
-			componentDao.add(new ComponentDto(this.getInfo()));
-		} catch (StorageException e) {
-			throw new InitializationException(e);
-		}
-	}
+    private void propagateComponents() throws InitializationException {
+        // Propagate Component COMPONENT_INFO from here
+        final WriteDao<ComponentDto> componentDao = ((WriteDao<ComponentDto>) dataStorageCallback.getDao(ComponentDto.class));
+        try {
+            try {
+                componentDao.delete(this.getInfo().getId());
+            } catch (ObjectWithIdNotFoundException e) {
+                ExcUtils.suppress(e);
+            }
+            componentDao.add(new ComponentDto(this.getInfo()));
+        } catch (StorageException e) {
+            throw new InitializationException(e);
+        }
+    }
 }

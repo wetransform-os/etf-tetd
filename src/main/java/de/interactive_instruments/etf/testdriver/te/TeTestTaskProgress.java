@@ -26,11 +26,11 @@ import de.interactive_instruments.etf.testdriver.AbstractTestTaskProgress;
  */
 class TeTestTaskProgress extends AbstractTestTaskProgress {
 
-	TeTestTaskProgress() {
-		initMaxSteps(4);
-	}
+    TeTestTaskProgress() {
+        initMaxSteps(4);
+    }
 
-	void stepCompleted() {
-		advance();
-	}
+    void stepCompleted() {
+        advance();
+    }
 }

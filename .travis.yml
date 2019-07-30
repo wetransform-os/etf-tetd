@@ -11,6 +11,25 @@ cache:
   - "$HOME/.gradle"
 before_script:
 - export TZ=Europe/Berlin
-script:
-- "./gradlew init"
-- "./gradlew -Dorg.gradle.project.ii.etfdev.quality.reports=true test jacocoTestReport"
+stages:
+- name: build
+  if: branch = master || branch = next
+- name: deploy
+  if: branch = next && type != pull_request
+jobs:
+  include:
+    - stage: build
+      script:
+        - "./gradlew -Dorg.gradle.project.ii.etfdev.quality.reports=true build jacocoTestReport"
+    - stage: deploy
+      script:
+        - "./gradlew build -x test"
+      deploy:
+        skip_cleanup: true
+        provider: s3
+        access_key_id: ${AWS_ACCESS_KEY}
+        secret_access_key: ${AWS_SECRET_KEY}
+        bucket: ${AWS_S3_BUCKET}
+        region: ${AWS_S3_REGION}
+        upload-dir: ${AWS_S3_BUCKET_TARGET_PATH}
+        local_dir: build/libs

@@ -33,3 +33,5 @@ jobs:
         region: ${AWS_S3_REGION}
         upload-dir: ${AWS_S3_BUCKET_TARGET_PATH}
         local_dir: build/libs
+        on:
+          branch: next

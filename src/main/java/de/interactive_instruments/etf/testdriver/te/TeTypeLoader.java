@@ -274,9 +274,21 @@ class TeTypeLoader implements EtsTypeLoader {
                 ets.setLabel(label);
                 ets.setReference(etsUrlStr);
                 ets.setRemoteResource(URI.create(etsUrlStr));
-                // The ETS ID is generated from the URL without the version
-                final String etsUrlWithoutVersion = UriUtils.getParent(etsUrlStr);
-                ets.setId(EidFactory.getDefault().createUUID(etsUrlWithoutVersion));
+                // The ETS ID is generated from the URL of the public Team Engine (without the version)
+                // to preserve dependencies declared on the imported test suites, regardless of where the
+                // Team Engine is deployed.
+                final URI suitesUriForId;
+                try {
+                    suitesUriForId = new URI("http://cite.opengeospatial.org/teamengine/" + suitesPath);
+                } catch (URISyntaxException e) {
+                    throw new InitializationException("Invalid URL", e);
+                }
+                final String etsUrlStrForId = UriUtils.getParent(suitesUriForId).toString() + etsUrl.attr("href");
+                final String etsUrlWithoutVersion = UriUtils.getParent(etsUrlStrForId);
+                logger.debug("ETS URL w/o version = {}", etsUrlWithoutVersion);
+                final EID etsId = EidFactory.getDefault().createUUID(etsUrlWithoutVersion);
+                logger.debug("UUID for Test Suite \"{}\": {}", label, etsId.toString());
+                ets.setId(etsId);
                 ets.setVersionFromStr(UriUtils.lastSegment(etsUrlStr));
                 // Check if an ETS already exists and if the version matches
                 boolean create = true;

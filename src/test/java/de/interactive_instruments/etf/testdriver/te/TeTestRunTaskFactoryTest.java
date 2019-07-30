@@ -78,7 +78,7 @@ public class TeTestRunTaskFactoryTest {
     private static TestDriverManager testDriverManager = null;
     private static DataStorage DATA_STORAGE = DataStorageTestUtils.inMemoryStorage();
 
-    private final static String VERSION = "1.26";
+    private final static String VERSION = "1.32";
     private final static String LABEL = "WFS 2.0 (OGC 09-025r2/ISO 19142) Conformance Test Suite";
     private final static EID wfs20EtsId = EidFactory.getDefault().createUUID(
             "http://cite.opengeospatial.org/teamengine/rest/suites/wfs20/");
